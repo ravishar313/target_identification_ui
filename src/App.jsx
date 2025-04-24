@@ -8,6 +8,7 @@ import ResearchReport from './components/ResearchReport'
 
 function App() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isStepLoading, setIsStepLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState({
     disease: '',
     similarDiseases: [],
@@ -30,6 +31,31 @@ function App() {
 
   const handleBack = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  // Determine if the Next button should be disabled
+  const isNextDisabled = () => {
+    // For DiseaseInput step, need a disease name
+    if (currentStep === 0) {
+      return !analysisData.disease;
+    }
+    
+    // For DiseaseExpertAnalysis step, need similar diseases data or check if loading
+    if (currentStep === 1) {
+      return isStepLoading || !analysisData.similarDiseases || analysisData.similarDiseases.length === 0;
+    }
+    
+    // For StructureExpertAnalysis step, need targets data
+    if (currentStep === 2) {
+      return isStepLoading || !analysisData.targets || analysisData.targets.length === 0;
+    }
+    
+    // For PDBFiltering step, need structures data
+    if (currentStep === 3) {
+      return isStepLoading || !analysisData.structures || Object.keys(analysisData.filteringResults).length === 0;
+    }
+    
+    return false;
   };
 
   const CurrentComponent = steps[currentStep].component;
@@ -75,6 +101,7 @@ function App() {
             onBack={handleBack}
             data={analysisData}
             setData={setAnalysisData}
+            setIsLoading={setIsStepLoading}
           />
         </div>
       </main>
@@ -97,7 +124,12 @@ function App() {
               </button>
               <button
                 onClick={handleNext}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                disabled={isNextDisabled()}
+                className={`px-4 py-2 rounded-md ${
+                  isNextDisabled()
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
               >
                 {currentStep === steps.length - 2 ? 'Generate Report' : 'Next'}
               </button>
