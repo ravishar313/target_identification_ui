@@ -11,6 +11,8 @@ function App() {
   const [isStepLoading, setIsStepLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState({
     disease: '',
+    projectName: '',
+    projectId: null,
     similarDiseases: [],
     targets: [],
     structures: [],
@@ -35,9 +37,9 @@ function App() {
 
   // Determine if the Next button should be disabled
   const isNextDisabled = () => {
-    // For DiseaseInput step, need a disease name
+    // For DiseaseInput step, need a disease name and project name
     if (currentStep === 0) {
-      return !analysisData.disease;
+      return !analysisData.disease || !analysisData.projectName || analysisData.projectId === null;
     }
     
     // For DiseaseExpertAnalysis step, need similar diseases data or check if loading
