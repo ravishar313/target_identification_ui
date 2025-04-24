@@ -2,7 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import DiseaseInput from './components/DiseaseInput'
 import DiseaseExpertAnalysis from './components/DiseaseExpertAnalysis'
-import StructureExpertAnalysis from './components/StructureExpertAnalysis'
+import TargetFiltering from './components/TargetFiltering'
 import PDBFiltering from './components/PDBFiltering'
 import ResearchReport from './components/ResearchReport'
 
@@ -22,7 +22,7 @@ function App() {
   const steps = [
     { component: DiseaseInput, title: 'Disease Input' },
     { component: DiseaseExpertAnalysis, title: 'Disease Expert Analysis' },
-    { component: StructureExpertAnalysis, title: 'Structure Expert Analysis' },
+    { component: TargetFiltering, title: 'Target Filtering' },
     { component: PDBFiltering, title: 'PDB Filtering' },
     { component: ResearchReport, title: 'Research Report' }
   ];
@@ -47,7 +47,7 @@ function App() {
       return isStepLoading || !analysisData.similarDiseases || analysisData.similarDiseases.length === 0;
     }
     
-    // For StructureExpertAnalysis step, need targets data
+    // For TargetFiltering step, need targets data
     if (currentStep === 2) {
       return isStepLoading || !analysisData.targets || analysisData.targets.length === 0;
     }
