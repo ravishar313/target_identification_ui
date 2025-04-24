@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { endpoints } from '../constants/api';
 
 const DiseaseExpertAnalysis = ({ onNext, onBack, data, setData, setIsLoading }) => {
   const [isLocalLoading, setIsLocalLoading] = useState(false);
@@ -18,7 +19,7 @@ const DiseaseExpertAnalysis = ({ onNext, onBack, data, setData, setIsLoading }) 
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8006/process_disease', {
+      const response = await fetch(endpoints.processDiseaseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,11 +115,20 @@ const DiseaseExpertAnalysis = ({ onNext, onBack, data, setData, setIsLoading }) 
       
       <div className="mb-8">
         <h3 className="text-xl font-semibold mb-4">Similar Diseases</h3>
-        <div className="space-y-4">
+        <div className="space-y-6">
           {data.similarDiseases.map((item, index) => (
-            <div key={index} className="p-4 border rounded-lg shadow-sm">
-              <h4 className="font-bold text-lg">{item.disease}</h4>
-              <p className="text-gray-700 mt-2">{item.rationale}</p>
+            <div key={index} className="bg-white border rounded-lg shadow-sm overflow-hidden">
+              <div className="bg-blue-50 border-b px-6 py-4">
+                <h4 className="font-bold text-lg text-blue-900">{item.disease}</h4>
+              </div>
+              <div className="px-6 py-4">
+                <div className="mb-2">
+                  <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                    Rationale for Selection
+                  </span>
+                </div>
+                <p className="text-gray-700 mt-2 leading-relaxed">{item.rationale}</p>
+              </div>
             </div>
           ))}
         </div>
