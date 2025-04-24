@@ -7,4 +7,5 @@ export const endpoints = {
   createProjectUrl: `${BaseUrl}/create_project`,
   listProjectsUrl: `${BaseUrl}/list_projects`,
   getPotentialTargetsUrl: `${BaseUrl}/get_potential_targets`,
+  pdbFilteringUrl: `${BaseUrl}/pdb_filtering`,
 }; 
