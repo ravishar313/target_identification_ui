@@ -21,8 +21,9 @@ const PDBViewer = ({ pdbId, width = 400, height = 400 }) => {
 
   // Function to generate the Mol* URL with proper parameters
   const getMolstarUrl = (pdbId) => {
-    // Use parameters to focus on the structure and hide complex UI initially
-    return `https://molstar.org/viewer/?pdb=${pdbId}&expand-all=1&hide-controls=0&snapshot-url=https://molstar.org/viewer/snapshot/preset-structure-representation.molj`;
+    // Use parameters to focus purely on the structure visualization 
+    // Hide UI panels and toolbars to create a cleaner viewing experience
+    return `https://molstar.org/viewer/?pdb=${pdbId}&expand-all=1&hide-controls=1&hide-settings=1&hide-sequence=1&hide-expanded=1&hide-inactive=1&collapse-left-panel=1&hide-animation-controls=1&snapshot-url=https://molstar.org/viewer/snapshot/preset-structure-representation.molj`;
   };
 
   // Convert width to proper CSS value
