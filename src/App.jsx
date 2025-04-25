@@ -80,14 +80,26 @@ function App() {
               </div>
               <div className="mt-2 flex justify-between">
                 {steps.map((step, idx) => (
-                  <div
+                  <button
                     key={idx}
-                    className={`text-sm ${
-                      idx <= currentStep ? 'text-blue-600 font-medium' : 'text-gray-500'
+                    onClick={() => {
+                      // Only allow navigating to steps we've already completed or the current one
+                      // or one step ahead (prevents skipping multiple steps)
+                      if (idx <= currentStep + 1) {
+                        setCurrentStep(idx);
+                      }
+                    }}
+                    disabled={idx > currentStep + 1}
+                    className={`text-sm px-2 py-1 rounded focus:outline-none transition-colors duration-200 ${
+                      idx <= currentStep 
+                        ? 'text-blue-600 font-medium hover:bg-blue-50' 
+                        : idx === currentStep + 1
+                          ? 'text-gray-600 hover:bg-gray-50 cursor-pointer'
+                          : 'text-gray-400 cursor-not-allowed'
                     }`}
                   >
                     {step.title}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -108,37 +120,7 @@ function App() {
         </div>
       </main>
 
-      {/* Footer Navigation */}
-      {currentStep !== steps.length - 1 && (
-        <footer className="bg-white border-t">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex justify-between">
-              <button
-                onClick={handleBack}
-                disabled={currentStep === 0}
-                className={`px-4 py-2 rounded-md ${
-                  currentStep === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Back
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={isNextDisabled()}
-                className={`px-4 py-2 rounded-md ${
-                  isNextDisabled()
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
-              >
-                {currentStep === steps.length - 2 ? 'Generate Report' : 'Next'}
-              </button>
-            </div>
-          </div>
-        </footer>
-      )}
+      {/* Footer Navigation - Removed as requested */}
     </div>
   )
 }

@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import html2pdf from 'html2pdf.js';
 import { endpoints } from '../constants/api';
 
-const ResearchReport = ({ data, setIsLoading }) => {
+const ResearchReport = ({ data, setIsLoading, onBack }) => {
   const [report, setReport] = useState(null);
   const [isLocalLoading, setIsLocalLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -292,9 +292,17 @@ const ResearchReport = ({ data, setIsLoading }) => {
         </div>
       </div>
 
-      <div className="mt-8 text-center text-gray-500 text-sm">
-        <p>This report was automatically generated based on analysis of the disease and identified targets.</p>
-        <p className="mt-1">© {new Date().getFullYear()} AI Drug Discovery Pipeline</p>
+      <div className="mt-8 flex justify-between items-center">
+        <button
+          onClick={onBack}
+          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200"
+        >
+          Back to PDB Filtering
+        </button>
+        <div className="text-center text-gray-500 text-sm">
+          <p>This report was automatically generated based on analysis of the disease and identified targets.</p>
+          <p className="mt-1">© {new Date().getFullYear()} AI Drug Discovery Pipeline</p>
+        </div>
       </div>
     </div>
   );
