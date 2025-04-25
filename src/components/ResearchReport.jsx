@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import html2pdf from 'html2pdf.js';
 import { endpoints } from '../constants/api';
+import { exportToCSV } from '../utils/csvExport';
 
 const ResearchReport = ({ data, setIsLoading, onBack }) => {
   const [report, setReport] = useState(null);
@@ -64,6 +65,31 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
     };
     
     html2pdf().set(opt).from(element).save();
+  };
+  
+  const handleDownloadAllDataCSV = () => {
+    // Create project summary with all data
+    const projectData = [{
+      project_name: data.projectName,
+      disease: data.disease,
+      project_id: data.projectId,
+      similar_diseases_count: data.similarDiseases?.length || 0,
+      targets_count: data.targets?.length || 0,
+      structures_count: data.structures?.length || 0,
+      created_at: data.createdAt ? new Date(data.createdAt * 1000).toISOString() : 'Unknown'
+    }];
+    
+    const headers = [
+      { label: 'Project Name', key: 'project_name' },
+      { label: 'Disease', key: 'disease' },
+      { label: 'Project ID', key: 'project_id' },
+      { label: 'Similar Diseases Count', key: 'similar_diseases_count' },
+      { label: 'Targets Count', key: 'targets_count' },
+      { label: 'Structures Count', key: 'structures_count' },
+      { label: 'Created At', key: 'created_at' }
+    ];
+    
+    exportToCSV(projectData, headers, `${data.projectName || 'Research'}_project_summary.csv`);
   };
 
   // Custom components for ReactMarkdown to handle special links
@@ -255,15 +281,26 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
     <div className="max-w-5xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Research Report</h2>
-        <button
-          onClick={handleDownloadPDF}
-          className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-          Download PDF
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleDownloadAllDataCSV}
+            className="flex items-center bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            Download CSV
+          </button>
+          <button
+            onClick={handleDownloadPDF}
+            className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Download PDF
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-8" ref={reportRef}>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { endpoints } from '../constants/api';
+import { exportToCSV } from '../utils/csvExport';
 
 const DiseaseExpertAnalysis = ({ onNext, onBack, data, setData, setIsLoading }) => {
   const [isLocalLoading, setIsLocalLoading] = useState(false);
@@ -45,6 +46,15 @@ const DiseaseExpertAnalysis = ({ onNext, onBack, data, setData, setIsLoading }) 
 
   const handleRetry = () => {
     findSimilarDiseases();
+  };
+
+  const handleDownloadCSV = () => {
+    const headers = [
+      { label: 'Disease', key: 'disease' },
+      { label: 'Rationale', key: 'rationale' }
+    ];
+    
+    exportToCSV(data.similarDiseases, headers, `${data.disease}_similar_diseases.csv`);
   };
 
   // Display loading state
@@ -149,7 +159,20 @@ const DiseaseExpertAnalysis = ({ onNext, onBack, data, setData, setIsLoading }) 
   // Display results
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-6">Disease Expert Analysis for {data.disease}</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Disease Expert Analysis for {data.disease}</h2>
+        {data.similarDiseases && data.similarDiseases.length > 0 && (
+          <button
+            onClick={handleDownloadCSV}
+            className="flex items-center bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Download CSV
+          </button>
+        )}
+      </div>
       <p className="text-gray-600 mb-4">Project: {data.projectName} (ID: {data.projectId})</p>
       
       <div className="mb-8">

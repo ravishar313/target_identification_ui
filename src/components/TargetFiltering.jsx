@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { endpoints } from '../constants/api';
+import { exportToCSV } from '../utils/csvExport';
 
 const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
   const [isLocalLoading, setIsLocalLoading] = useState(false);
@@ -56,6 +57,20 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
       setIsLocalLoading(false);
       setIsLoading(false);
     }
+  };
+
+  const handleDownloadCSV = () => {
+    const headers = [
+      { label: 'Target Name', key: 'name' },
+      { label: 'Target ID', key: 'target_id' },
+      { label: 'UniProt ID', key: 'uniprot_id' },
+      { label: 'Gene Name', key: 'gene_name' },
+      { label: 'Good Target', key: 'is_good_target' },
+      { label: 'Rationale', key: 'rationale' },
+      { label: 'PDB IDs', key: 'pdb_ids' }
+    ];
+    
+    exportToCSV(potentialTargets, headers, `${data.disease}_potential_targets.csv`);
   };
 
   // Filter and sort targets
@@ -220,11 +235,24 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
   // Display results in a table
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-6">Target Filtering</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Target Filtering</h2>
+        {potentialTargets && potentialTargets.length > 0 && (
+          <button
+            onClick={handleDownloadCSV}
+            className="flex items-center bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Download CSV
+          </button>
+        )}
+      </div>
       
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex-1 flex flex-col sm:flex-row gap-2">
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <input
               type="text"
               placeholder="Search targets..."
@@ -233,8 +261,13 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full p-2 border border-gray-300 rounded-md"
+              className="w-full p-2 pl-8 border border-gray-300 rounded-md"
             />
+            <div className="absolute left-2 top-2.5 text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </div>
           </div>
           <div>
             <select 
