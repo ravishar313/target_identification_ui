@@ -15,9 +15,15 @@ const PDBViewer = ({ pdbId, width = 400, height = 400 }) => {
     // If pdbId changes, we might need to refresh the iframe
     if (iframeRef.current) {
       // Update iframe src to load the new structure
-      iframeRef.current.src = `https://molstar.org/viewer/?pdb=${pdbId}`;
+      iframeRef.current.src = getMolstarUrl(pdbId);
     }
   }, [pdbId]);
+
+  // Function to generate the Mol* URL with proper parameters
+  const getMolstarUrl = (pdbId) => {
+    // Use parameters to focus on the structure and hide complex UI initially
+    return `https://molstar.org/viewer/?pdb=${pdbId}&expand-all=1&hide-controls=0&snapshot-url=https://molstar.org/viewer/snapshot/preset-structure-representation.molj`;
+  };
 
   // Convert width to proper CSS value
   const widthStyle = typeof width === 'string' ? width : `${width}px`;
@@ -55,7 +61,7 @@ const PDBViewer = ({ pdbId, width = 400, height = 400 }) => {
     >
       <iframe
         ref={iframeRef}
-        src={`https://molstar.org/viewer/?pdb=${pdbId}&hide-controls=0&hide-settings=0`}
+        src={getMolstarUrl(pdbId)}
         style={iframeStyle}
         title={`Mol* visualization of ${pdbId}`}
         allowFullScreen
