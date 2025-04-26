@@ -10,6 +10,7 @@ Target Identification UI is a web application designed to streamline the process
 - **UI Framework**: TailwindCSS 3.3.0 with typography plugin
 - **PDF Generation**: html2pdf.js
 - **Markdown Support**: react-markdown with remark-gfm
+- **Molecular Visualization**: molstar 4.13.0
 
 ## Application Structure
 
@@ -18,8 +19,8 @@ The application is structured as a single-page React application with a step-bas
 1. **Disease Input**: Select or create a project with a disease to analyze
 2. **Disease Expert Analysis**: Analyze the disease and find similar diseases
 3. **Target Filtering**: Identify and filter potential therapeutic targets
-4. **PDB Filtering**: Filter protein structures for the selected targets
-5. **Research Report**: Generate a comprehensive research report
+4. **PDB Filtering**: Filter protein structures for the selected targets, now with molecular visualization
+6. **Research Report**: Generate a comprehensive research report
 
 ### Directory Structure
 
@@ -31,10 +32,12 @@ target_identification_ui/
 │   │   ├── DiseaseExpertAnalysis.jsx  # Similar disease analysis
 │   │   ├── TargetFiltering.jsx        # Target identification and filtering
 │   │   ├── PDBFiltering.jsx           # Protein structure filtering
-│   │   ├── ResearchReport.jsx         # Report generation component
-│   │   └── StructureExpertAnalysis.jsx # Structure analysis component
+│   │   ├── PDBViewer.jsx              # Component for 3D protein visualization
+│   │   └── ResearchReport.jsx         # Report generation component
 │   ├── constants/          # Application constants
 │   │   └── api.js          # API endpoint definitions
+│   ├── utils/              # Utility functions
+│   │   └── csvExport.js    # Functionality for exporting data to CSV
 │   ├── data/               # Static data files
 │   │   └── DiseaseList.json # List of diseases for autocomplete
 │   ├── assets/             # Static assets (images, icons)
@@ -46,6 +49,7 @@ target_identification_ui/
 ├── dist/                   # Production build output
 ├── tailwind.config.js      # Tailwind CSS configuration
 ├── postcss.config.js       # PostCSS configuration for Tailwind
+├── eslint.config.js        # ESLint configuration
 └── vite.config.js          # Vite bundler configuration
 ```
 
@@ -74,6 +78,7 @@ Features:
 - Autocomplete suggestions from a predefined disease list
 - Recently searched diseases stored in localStorage
 - Random disease suggestions for exploration
+- Project management capabilities (very basic only project name for now mapped across the pipeline)
 
 ### 2. Disease Expert Analysis (DiseaseExpertAnalysis.jsx)
 
@@ -81,6 +86,7 @@ This component:
 - Analyzes the selected disease
 - Identifies similar diseases that could provide insights
 - Displays rationales for disease similarity
+- There is export functionality for the disease expert analysis report
 
 The analysis process typically takes 30-40 seconds and provides detailed information about similar diseases and why they're relevant to the research.
 
@@ -91,6 +97,7 @@ This component:
 - Provides filtering and sorting capabilities
 - Categorizes targets as "good" or "bad" based on analysis
 - Displays detailed information about each target
+- Allows CSV export of target data
 
 Features:
 - Search functionality for targets
@@ -98,6 +105,7 @@ Features:
 - Sortable columns
 - Pagination for browsing many targets
 - Detailed view for selected targets with supporting evidence
+- Data export functionality
 
 ### 4. PDB Filtering (PDBFiltering.jsx)
 
@@ -105,6 +113,7 @@ This component:
 - Identifies relevant protein structures for selected targets
 - Provides filtering tools for structure selection
 - Displays detailed structural information
+- Enables 3D visualization of protein structures with PDBViewer
 
 The filtering process helps researchers find the most relevant protein structures for further analysis or docking studies.
 
@@ -123,6 +132,7 @@ The application features a modern, clean interface with:
 - Responsive design for different screen sizes
 - Loading indicators for asynchronous operations
 - Error handling with retry options
+- Dark mode support
 
 ## Data Persistence
 
