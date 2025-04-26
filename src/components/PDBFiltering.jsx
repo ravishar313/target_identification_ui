@@ -287,15 +287,15 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">PDB Filtering</h2>
         
-        <button
-          onClick={handleDownloadCSV}
+          <button
+            onClick={handleDownloadCSV}
           className="mt-2 sm:mt-0 btn-secondary flex items-center"
-        >
+          >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-          Download CSV
-        </button>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Download CSV
+          </button>
       </div>
       
       {/* Filter and Search Section */}
@@ -320,27 +320,27 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                   setCurrentPage(1);
                 }}
               />
+              </div>
             </div>
-          </div>
           
-          <div>
+            <div>
             <label htmlFor="showGoodStructures" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Structure Quality</label>
-            <select
+              <select 
               id="showGoodStructures"
               className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              value={showGoodStructures}
-              onChange={(e) => {
-                setShowGoodStructures(e.target.value);
-                setCurrentPage(1);
-              }}
-            >
-              <option value="all">All Structures</option>
-              <option value="good">Good Structures Only</option>
+                value={showGoodStructures} 
+                onChange={(e) => {
+                  setShowGoodStructures(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="all">All Structures</option>
+                <option value="good">Good Structures Only</option>
               <option value="bad">Poor Structures Only</option>
-            </select>
+              </select>
+            </div>
           </div>
-        </div>
-      </div>
+          </div>
       
       {/* PDB Viewer (when a structure is selected) */}
       {selectedViewerPDB && (
@@ -370,17 +370,17 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
               </button>
               <a
                 href={`https://www.rcsb.org/structure/${selectedViewerPDB.pdb_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
                 aria-label="View in RCSB PDB"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
               {!isFullScreen && (
-                <button
+                <button 
                   onClick={() => setSelectedViewerPDB(null)}
                   className="p-2 rounded-md text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 focus:outline-none"
                   aria-label="Close viewer"
@@ -390,9 +390,9 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                   </svg>
                 </button>
               )}
+              </div>
             </div>
-          </div>
-          
+            
           <div className="flex flex-col lg:flex-row gap-6">
             <div className={`${isFullScreen ? 'w-full' : 'w-full lg:w-1/2'}`}>
               <PDBViewer 
@@ -403,25 +403,25 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
               
               {/* Links below viewer */}
               <div className="mt-3 flex justify-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
-                <a 
+                <a
                   href={`https://www.rcsb.org/structure/${selectedViewerPDB.pdb_id}`}
-                  target="_blank" 
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   RCSB PDB
                 </a>
-                <a 
+                <a
                   href={`https://www.ebi.ac.uk/pdbe/entry/pdb/${selectedViewerPDB.pdb_id.toLowerCase()}`}
-                  target="_blank" 
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   PDBe
                 </a>
-                <a 
+                <a
                   href={`https://molstar.org/viewer/?pdb=${selectedViewerPDB.pdb_id}`}
-                  target="_blank" 
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
@@ -439,11 +439,11 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                     <div className="flex">
                       <dt className="w-1/3 font-medium text-gray-500 dark:text-gray-400">Target:</dt>
                       <dd className="w-2/3 text-gray-900 dark:text-white">{selectedViewerPDB.target_name}</dd>
-                    </div>
+          </div>
                     <div className="flex">
                       <dt className="w-1/3 font-medium text-gray-500 dark:text-gray-400">Gene:</dt>
                       <dd className="w-2/3 text-gray-900 dark:text-white">{selectedViewerPDB.gene_name || 'N/A'}</dd>
-                    </div>
+        </div>
                     <div className="flex">
                       <dt className="w-1/3 font-medium text-gray-500 dark:text-gray-400">Target ID:</dt>
                       <dd className="w-2/3 text-gray-900 dark:text-white">{selectedViewerPDB.target_id}</dd>
@@ -515,7 +515,7 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                     </div>
                   )}
                   
-                  {selectedViewerPDB.justification_for_pdb_selection && (
+                  {selectedViewerPDB.good_structure && selectedViewerPDB.justification_for_pdb_selection && (
                     <div className="mt-4">
                       <h5 className="font-medium text-gray-900 dark:text-white mb-2">Selection Justification</h5>
                       <p className="text-sm text-gray-700 dark:text-gray-300">{selectedViewerPDB.justification_for_pdb_selection}</p>
@@ -555,68 +555,68 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 <button
                   className="flex items-center focus:outline-none"
-                  onClick={() => handleSort('pdb_id')}
-                >
-                  PDB ID
-                  {sortBy === 'pdb_id' && (
-                    <span className="ml-1">
-                      {sortDirection === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
+                      onClick={() => handleSort('pdb_id')}
+                    >
+                        PDB ID
+                        {sortBy === 'pdb_id' && (
+                          <span className="ml-1">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
                 </button>
-              </th>
+                    </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 <button
                   className="flex items-center focus:outline-none"
-                  onClick={() => handleSort('target_name')}
-                >
+                      onClick={() => handleSort('target_name')}
+                    >
                   Target
-                  {sortBy === 'target_name' && (
-                    <span className="ml-1">
-                      {sortDirection === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
+                        {sortBy === 'target_name' && (
+                          <span className="ml-1">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
                 </button>
-              </th>
+                    </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Gene
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 <button
                   className="flex items-center focus:outline-none"
-                  onClick={() => handleSort('method')}
-                >
-                  Method
-                  {sortBy === 'method' && (
-                    <span className="ml-1">
-                      {sortDirection === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
+                      onClick={() => handleSort('method')}
+                    >
+                        Method
+                        {sortBy === 'method' && (
+                          <span className="ml-1">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
                 </button>
-              </th>
+                    </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 <button
                   className="flex items-center focus:outline-none"
-                  onClick={() => handleSort('good_structure')}
-                >
-                  Quality
-                  {sortBy === 'good_structure' && (
-                    <span className="ml-1">
-                      {sortDirection === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
+                      onClick={() => handleSort('good_structure')}
+                    >
+                        Quality
+                        {sortBy === 'good_structure' && (
+                          <span className="ml-1">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
                 </button>
-              </th>
+                    </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Links
-              </th>
+                      Links
+                    </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {getCurrentPagePDBs().map((pdb) => (
+                  {getCurrentPagePDBs().map((pdb) => (
               <tr 
                 key={pdb.pdb_id} 
                 className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
@@ -630,55 +630,55 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                     className="hover:underline"
                     onClick={(e) => e.stopPropagation()} // Prevent row click when clicking the link
                   >
-                    {pdb.pdb_id}
-                  </a>
-                </td>
+                            {pdb.pdb_id}
+                          </a>
+                      </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                   {truncateText(pdb.target_name, 30)}
-                </td>
+                      </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                   {pdb.gene_name || '-'}
-                </td>
+                      </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                   {pdb.method || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {pdb.good_structure ? (
+                        {pdb.good_structure ? (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-800/30 text-green-800 dark:text-green-300">
                       Good
-                    </span>
-                  ) : (
+                          </span>
+                        ) : (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-800/30 text-yellow-800 dark:text-yellow-300">
                       Poor
-                    </span>
-                  )}
-                </td>
+                          </span>
+                        )}
+                      </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex space-x-2">
-                    <a 
-                      href={`https://www.uniprot.org/uniprotkb/${pdb.uniprot_id}/entry`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                        <a 
+                          href={`https://www.uniprot.org/uniprotkb/${pdb.uniprot_id}/entry`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                       onClick={(e) => e.stopPropagation()} // Prevent row click when clicking the link
-                    >
-                      UniProt
-                    </a>
-                    {pdb.pubmed_id && (
-                      <a 
-                        href={`https://pubmed.ncbi.nlm.nih.gov/${pdb.pubmed_id}/`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        >
+                          UniProt
+                        </a>
+                        {pdb.pubmed_id && (
+                          <a 
+                            href={`https://pubmed.ncbi.nlm.nih.gov/${pdb.pubmed_id}/`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
                         className="text-blue-600 dark:text-blue-400 hover:underline"
                         onClick={(e) => e.stopPropagation()} // Prevent row click when clicking the link
-                      >
-                        PubMed
-                      </a>
-                    )}
+                          >
+                            PubMed
+                          </a>
+                        )}
                   </div>
-                </td>
+                      </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                  <button
+                        <button
                     onClick={(e) => {
                       e.stopPropagation(); // Prevent row click
                       handleVisualizeClick(pdb);
@@ -686,10 +686,10 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mr-4"
                   >
                     Visualize
-                  </button>
-                </td>
-              </tr>
-            ))}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
             
             {getCurrentPagePDBs().length === 0 && (
               <tr>
@@ -698,77 +698,77 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 </td>
               </tr>
             )}
-          </tbody>
-        </table>
-      </div>
-      
+                </tbody>
+              </table>
+            </div>
+
       {/* Pagination */}
       {filteredPDBs.length > 0 && (
         <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6 bg-white dark:bg-gray-800 rounded-b-lg">
           <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
               className={`relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md ${
                 currentPage === 1 
                   ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
               className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md ${
                 currentPage === totalPages 
                   ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
-            >
-              Next
-            </button>
-          </div>
+                  >
+                    Next
+                  </button>
+                </div>
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
+                  <div>
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 Showing <span className="font-medium">{filteredPDBs.length > 0 ? (currentPage - 1) * pdbsPerPage + 1 : 0}</span> to <span className="font-medium">
-                  {Math.min(currentPage * pdbsPerPage, getFilteredAndSortedPDBs().length)}
+                        {Math.min(currentPage * pdbsPerPage, getFilteredAndSortedPDBs().length)}
                 </span> of <span className="font-medium">{getFilteredAndSortedPDBs().length}</span> results
-              </p>
-            </div>
-            <div>
+                    </p>
+                  </div>
+                  <div>
               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={() => goToPage(1)}
-                  disabled={currentPage === 1}
+                      <button
+                        onClick={() => goToPage(1)}
+                        disabled={currentPage === 1}
                   className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
                     currentPage === 1 
                       ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
                       : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
-                >
-                  <span className="sr-only">First</span>
+                      >
+                        <span className="sr-only">First</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M15.707 15.707a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 010 1.414zm-6 0a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 1.414L5.414 10l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 1}
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
                   className={`relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium ${
                     currentPage === 1 
                       ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
                       : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
-                >
-                  <span className="sr-only">Previous</span>
+                      >
+                        <span className="sr-only">Previous</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                
-                {/* Page numbers */}
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      
+                      {/* Page numbers */}
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum;
                   if (totalPages <= 5) {
@@ -781,8 +781,8 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                     pageNum = currentPage - 2 + i;
                   }
                   
-                  return (
-                    <button
+                          return (
+                            <button
                       key={pageNum}
                       onClick={() => goToPage(pageNum)}
                       className={`relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium ${
@@ -792,55 +792,55 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                       }`}
                     >
                       {pageNum}
-                    </button>
-                  );
-                })}
-                
-                <button
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
+                            </button>
+                          );
+                      })}
+                      
+                      <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
                   className={`relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium ${
                     currentPage === totalPages 
                       ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
                       : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
-                >
-                  <span className="sr-only">Next</span>
+                      >
+                        <span className="sr-only">Next</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => goToPage(totalPages)}
-                  disabled={currentPage === totalPages}
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => goToPage(totalPages)}
+                        disabled={currentPage === totalPages}
                   className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
                     currentPage === totalPages 
                       ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' 
                       : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
-                >
-                  <span className="sr-only">Last</span>
+                      >
+                        <span className="sr-only">Last</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" />
                     <path fillRule="evenodd" d="M4.293 15.707a1 1 0 010-1.414L8.586 10 4.293 5.707a1 1 0 011.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
-      )}
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
       
       {/* Navigation Buttons */}
-      <div className="flex justify-between mt-8">
-        <button
-          onClick={onBack}
+        <div className="flex justify-between mt-8">
+          <button
+            onClick={onBack}
           className="btn-secondary"
-        >
-          Back
-        </button>
+          >
+            Back
+          </button>
         
-        <button
+          <button
           onClick={() => {
             if (filteredPDBs.length > 0) {
               onNext();
@@ -852,8 +852,8 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
           disabled={isLocalLoading}
         >
           {filteredPDBs.length > 0 ? 'Proceed to Report' : 'Load Structures'}
-        </button>
-      </div>
+          </button>
+        </div>
     </div>
   );
 };
