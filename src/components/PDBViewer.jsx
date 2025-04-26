@@ -6,8 +6,9 @@ import { useEffect, useRef } from 'react';
  * @param {string} props.pdbId The PDB ID to visualize
  * @param {number|string} props.width Width of the viewer (default 400px or can be percentage string)
  * @param {number|string} props.height Height of the viewer (default 400px)
+ * @param {React.ReactNode} props.children Optional content to render below the viewer
  */
-const PDBViewer = ({ pdbId, width = 400, height = 400 }) => {
+const PDBViewer = ({ pdbId, width = 400, height = 400, children }) => {
   const iframeRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -32,27 +33,32 @@ const PDBViewer = ({ pdbId, width = 400, height = 400 }) => {
   const heightStyle = typeof height === 'string' ? height : `${height}px`;
 
   return (
-    <div 
-      ref={containerRef} 
-      className="relative overflow-hidden flex flex-col mx-auto rounded-lg border dark:border-gray-700 shadow-molecule bg-white dark:bg-gray-800"
-      style={{ 
-        width: widthStyle, 
-        height: heightStyle
-      }}
-      data-pdb-id={pdbId}
-    >
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-        <div className="molecule-icon text-4xl opacity-20">🧪</div>
+    <div className="flex flex-col">
+      <div 
+        ref={containerRef} 
+        className="relative overflow-hidden flex flex-col mx-auto rounded-lg border dark:border-gray-700 shadow-molecule bg-white dark:bg-gray-800"
+        style={{ 
+          width: widthStyle, 
+          height: heightStyle
+        }}
+        data-pdb-id={pdbId}
+      >
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div className="molecule-icon text-4xl opacity-20">🧪</div>
+        </div>
+        <iframe
+          ref={iframeRef}
+          src={getMolstarUrl(pdbId)}
+          className="absolute inset-0 w-full h-full border-none"
+          title={`Mol* visualization of ${pdbId}`}
+          allowFullScreen
+          loading="eager"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        />
       </div>
-      <iframe
-        ref={iframeRef}
-        src={getMolstarUrl(pdbId)}
-        className="absolute inset-0 w-full h-full border-none"
-        title={`Mol* visualization of ${pdbId}`}
-        allowFullScreen
-        loading="eager"
-        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-      />
+      
+      {/* Render children if provided */}
+      {children}
     </div>
   );
 };

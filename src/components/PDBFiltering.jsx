@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { endpoints } from '../constants/api';
 import { exportToCSV } from '../utils/csvExport';
 import PDBViewer from './PDBViewer';
+import PDBSecondaryAndBindingSite from './PDBSecondaryAndBindingSite';
 
 const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
   const [isLocalLoading, setIsLocalLoading] = useState(false);
@@ -399,35 +400,45 @@ const PDBFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 pdbId={selectedViewerPDB.pdb_id} 
                 width="100%" 
                 height={isFullScreen ? "80vh" : "400px"}
-              />
+              >
+                {/* Links below viewer */}
+                <div className="mt-3 flex justify-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
+                  <a
+                    href={`https://www.rcsb.org/structure/${selectedViewerPDB.pdb_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    RCSB PDB
+                  </a>
+                  <a
+                    href={`https://www.ebi.ac.uk/pdbe/entry/pdb/${selectedViewerPDB.pdb_id.toLowerCase()}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    PDBe
+                  </a>
+                  <a
+                    href={`https://molstar.org/viewer/?pdb=${selectedViewerPDB.pdb_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    View on Mol*
+                  </a>
+                </div>
+                
+                {/* Add Secondary Structure and Binding Site component in fullscreen mode */}
+                {isFullScreen && (
+                  <PDBSecondaryAndBindingSite pdbId={selectedViewerPDB.pdb_id} isFullScreen={true} />
+                )}
+              </PDBViewer>
               
-              {/* Links below viewer */}
-              <div className="mt-3 flex justify-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
-                <a
-                  href={`https://www.rcsb.org/structure/${selectedViewerPDB.pdb_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  RCSB PDB
-                </a>
-                <a
-                  href={`https://www.ebi.ac.uk/pdbe/entry/pdb/${selectedViewerPDB.pdb_id.toLowerCase()}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  PDBe
-                </a>
-                <a
-                  href={`https://molstar.org/viewer/?pdb=${selectedViewerPDB.pdb_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  View on Mol*
-                </a>
-              </div>
+              {/* Add Secondary Structure and Binding Site component in non-fullscreen mode */}
+              {!isFullScreen && (
+                <PDBSecondaryAndBindingSite pdbId={selectedViewerPDB.pdb_id} isFullScreen={false} />
+              )}
             </div>
             
             {!isFullScreen && (
