@@ -4,12 +4,48 @@
 
 @layer base {
   html {
-    @apply h-full bg-gray-50;
+    @apply h-full bg-white dark:bg-pharma-dark text-gray-900 dark:text-white transition-colors duration-200;
   }
   body {
-    @apply h-full m-0 p-0;
+    @apply h-full m-0 p-0 font-sans antialiased;
   }
   #root {
     @apply h-full;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium tracking-tight;
+  }
+
+  button, a {
+    @apply transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-molecule p-6 dark:border dark:border-gray-700;
+  }
+
+  .input-field {
+    @apply border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md shadow-sm focus:ring-2 focus:ring-pharma-blue focus:border-pharma-blue;
+  }
+
+  .btn-primary {
+    @apply bg-pharma-blue hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-md shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium py-2 px-4 rounded-md shadow-sm;
+  }
+
+  .molecule-icon {
+    @apply text-pharma-green dark:text-pharma-teal;
+  }
+}
+
+@layer utilities {
+  .molecule-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
   }
 }

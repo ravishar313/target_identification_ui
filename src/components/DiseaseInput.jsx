@@ -217,44 +217,52 @@ const DiseaseInput = ({ onNext, data, setData }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Disease Analysis Input</h2>
+    <div className="w-full">
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">Disease Analysis Input</h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          Select an existing project or create a new one to begin identifying potential targets for drug discovery.
+        </p>
         
         {/* Existing Projects Section */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Existing Projects</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <span className="molecule-icon mr-2">🧪</span>Existing Projects
+            </h3>
             <button 
               onClick={handleRefreshProjects}
-              className="text-sm text-blue-500 hover:text-blue-700 flex items-center"
+              className="text-sm text-pharma-blue dark:text-pharma-teal hover:text-opacity-80 flex items-center transition-colors"
               disabled={loadingProjects}
             >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+              </svg>
               {loadingProjects ? 'Loading...' : 'Refresh Projects'}
             </button>
           </div>
           
           {loadingProjects ? (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-2 text-sm text-gray-500">Loading projects...</p>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-pharma-blue dark:border-pharma-teal mx-auto"></div>
+              <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Loading projects...</p>
             </div>
           ) : projects.length > 0 ? (
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200 max-h-60 overflow-auto">
-              <ul className="space-y-2">
+            <div className="card bg-opacity-50 dark:bg-opacity-50 max-h-60 overflow-auto">
+              <ul className="space-y-3">
                 {projects.map((project) => (
                   <li key={project.id} className={`
-                    p-3 rounded-md cursor-pointer transition-colors duration-150
+                    p-3 rounded-md cursor-pointer transition-all duration-200
                     ${selectedProject && selectedProject.id === project.id 
-                      ? 'bg-blue-100 border border-blue-300' 
-                      : 'bg-white border border-gray-200 hover:bg-gray-100'
+                      ? 'bg-pharma-blue/10 dark:bg-pharma-teal/10 border border-pharma-blue/30 dark:border-pharma-teal/30 shadow-sm' 
+                      : 'bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                     }
                   `}
                     onClick={() => handleProjectSelect(project)}
                   >
-                    <div className="font-medium">{project.project_name}</div>
-                    <div className="text-sm text-gray-500">Disease: {project.disease}</div>
-                    <div className="text-xs text-gray-400">
+                    <div className="font-medium text-gray-900 dark:text-white">{project.project_name}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">Disease: {project.disease}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                       Created: {new Date(project.created_at * 1000).toLocaleString()}
                     </div>
                   </li>
@@ -262,7 +270,12 @@ const DiseaseInput = ({ onNext, data, setData }) => {
               </ul>
             </div>
           ) : (
-            <p className="text-center py-4 text-gray-500">No existing projects found. Create one below.</p>
+            <div className="card bg-opacity-50 dark:bg-opacity-50 flex flex-col items-center justify-center py-6">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="text-center text-gray-500 dark:text-gray-400">No existing projects found. Create one below.</p>
+            </div>
           )}
 
           {selectedProject && (
@@ -270,8 +283,11 @@ const DiseaseInput = ({ onNext, data, setData }) => {
               <button
                 type="button"
                 onClick={clearSelectedProject}
-                className="text-sm text-red-600 hover:text-red-800"
+                className="text-sm text-pharma-red hover:text-opacity-80 transition-colors flex items-center"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
                 Clear Selection & Create New Project
               </button>
             </div>
@@ -280,13 +296,14 @@ const DiseaseInput = ({ onNext, data, setData }) => {
         
         {/* Create New Project Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <span className="molecule-icon mr-2">🧬</span>
             {selectedProject ? 'Selected Project' : 'Create New Project'}
           </h3>
           
           {/* Project Name Input */}
           <div>
-            <label htmlFor="projectName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="projectName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Project Name
             </label>
             <input
@@ -294,8 +311,8 @@ const DiseaseInput = ({ onNext, data, setData }) => {
               id="projectName"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className={`w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                selectedProject ? 'bg-gray-100' : ''
+              className={`input-field w-full p-3 ${
+                selectedProject ? 'bg-gray-100 dark:bg-gray-700' : ''
               }`}
               placeholder="e.g., Alzheimer Research Project 2023"
               required
@@ -305,7 +322,7 @@ const DiseaseInput = ({ onNext, data, setData }) => {
 
           {/* Disease Input */}
           <div className="relative">
-            <label htmlFor="disease" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="disease" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Disease for Investigation
             </label>
             <input
@@ -315,8 +332,8 @@ const DiseaseInput = ({ onNext, data, setData }) => {
               value={disease}
               onChange={(e) => setDisease(e.target.value)}
               onFocus={() => setIsFocused(true)}
-              className={`w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                selectedProject ? 'bg-gray-100' : ''
+              className={`input-field w-full p-3 ${
+                selectedProject ? 'bg-gray-100 dark:bg-gray-700' : ''
               }`}
               placeholder="e.g., Type 2 Diabetes"
               required
@@ -327,12 +344,12 @@ const DiseaseInput = ({ onNext, data, setData }) => {
             {isFocused && suggestions.length > 0 && !selectedProject && (
               <ul 
                 ref={suggestionsRef}
-                className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+                className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto"
               >
                 {suggestions.map((suggestion, index) => (
                   <li
                     key={index}
-                    className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                     onClick={() => handleSuggestionClick(suggestion)}
                   >
                     {suggestion}
@@ -343,7 +360,7 @@ const DiseaseInput = ({ onNext, data, setData }) => {
           </div>
           
           {createProjectError && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-red-700">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-3 text-red-700 dark:text-red-400">
               {createProjectError}
             </div>
           )}
@@ -351,10 +368,8 @@ const DiseaseInput = ({ onNext, data, setData }) => {
           <button
             type="submit"
             disabled={isCreatingProject}
-            className={`w-full px-4 py-3 rounded-md ${
-              isCreatingProject
-                ? 'bg-gray-400 text-white cursor-not-allowed'
-                : 'bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+            className={`btn-primary w-full px-4 py-3 rounded-md ${
+              isCreatingProject ? 'opacity-70 cursor-not-allowed' : ''
             }`}
           >
             {isCreatingProject ? (
@@ -376,12 +391,14 @@ const DiseaseInput = ({ onNext, data, setData }) => {
             {/* Recent Searches Section */}
             {recentSearches.length > 0 && (
               <div className="mt-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Searches</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center mb-4">
+                  <span className="molecule-icon mr-2">🔍</span>Recent Searches
+                </h3>
                 <ul className="space-y-2">
                   {recentSearches.map((item, index) => (
                     <li
                       key={index}
-                      className="p-3 bg-gray-50 rounded-md cursor-pointer hover:bg-gray-100 transition-colors duration-150 text-gray-700"
+                      className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 text-gray-700 dark:text-gray-200"
                       onClick={() => handleRecentSearchClick(item)}
                     >
                       {item}
@@ -394,26 +411,37 @@ const DiseaseInput = ({ onNext, data, setData }) => {
             {/* Suggestions Section */}
             <div className="mt-8">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Suggested Diseases</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                  <span className="molecule-icon mr-2">💡</span>Suggested Diseases
+                </h3>
                 <button 
                   onClick={regenerateSuggestions}
-                  className="text-sm text-blue-500 hover:text-blue-700"
+                  className="text-sm text-pharma-blue dark:text-pharma-teal hover:text-opacity-80 transition-colors flex items-center"
                   aria-label="Get new suggestions"
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                  </svg>
                   Refresh Suggestions
                 </button>
               </div>
-              <ul className="space-y-2">
+              <div className="molecule-grid">
                 {randomSuggestions.map((item, index) => (
-                  <li
+                  <div
                     key={index}
-                    className="p-3 bg-gray-50 rounded-md cursor-pointer hover:bg-gray-100 transition-colors duration-150 text-gray-700"
+                    className="card p-4 cursor-pointer hover:shadow-lg transition-shadow duration-200 border border-transparent hover:border-pharma-blue/20 dark:hover:border-pharma-teal/20"
                     onClick={() => handleRecentSearchClick(item)}
                   >
-                    {item}
-                  </li>
+                    <div className="flex items-start mb-2">
+                      <div className="molecule-icon text-xl mr-2">🧪</div>
+                      <h4 className="font-medium text-gray-900 dark:text-white">{item}</h4>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Start a new drug discovery project targeting {item.toLowerCase()}.
+                    </p>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           </>
         )}

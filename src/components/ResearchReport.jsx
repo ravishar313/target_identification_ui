@@ -38,6 +38,7 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
       }
 
       const reportData = await response.json();
+      console.log("Report data received:", reportData); // For debugging
       setReport(reportData);
     } catch (err) {
       console.error('Error generating report:', err);
@@ -53,6 +54,34 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
       fetchReport();
     }
   }, [data.projectId]);
+
+  // Helper function to get report content from various response formats
+  const getReportContent = () => {
+    if (!report) return '';
+    
+    // Try different possible paths for the report content
+    if (report.report_data) {
+      return report.report_data;
+    } else if (report.info_section && report.target_section) {
+      // Combine different sections if they exist
+      return `# ${data.projectName || data.disease} Research Report\n\n${report.info_section}\n\n${processTargetSection(report.target_section)}`;
+    } else if (report.text || report.content) {
+      // Alternative fields
+      return report.text || report.content;
+    } else if (typeof report === 'string') {
+      // If report is directly a string
+      return report;
+    } else if (Object.keys(report).length > 0) {
+      // If none of the above, try to extract the first available field that might contain the report
+      const firstField = Object.keys(report)[0];
+      if (typeof report[firstField] === 'string') {
+        return report[firstField];
+      }
+    }
+    
+    // If we can't determine the format, render what we have as JSON
+    return "```json\n" + JSON.stringify(report, null, 2) + "\n```\n\n*The report format is unexpected. Please contact support.*";
+  };
 
   const handleDownloadPDF = () => {
     const element = reportRef.current;
@@ -106,7 +135,7 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
             href={`https://www.rcsb.org/structure/${props.children[0]}`} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
           >
             {props.children}
           </a>
@@ -124,7 +153,7 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
             href={`https://pubmed.ncbi.nlm.nih.gov/${pmid}/`} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
           >
             {props.children}
           </a>
@@ -140,7 +169,7 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
             href={`https://www.uniprot.org/uniprotkb/${props.children[0]}/entry`} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
           >
             {props.children}
           </a>
@@ -148,13 +177,13 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
       }
       
       // Default link behavior
-      return <a {...props} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" />;
+      return <a {...props} className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" />;
     },
     // Custom rendering for code blocks to add proper styling
     code: ({ node, inline, className, children, ...props }) => {
       const match = /language-(\w+)/.exec(className || '');
       return !inline && match ? (
-        <div className="bg-gray-50 rounded-md p-4 my-4 overflow-auto">
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-4 my-4 overflow-auto">
           <pre className={className}>
             <code className={className} {...props}>
               {children}
@@ -162,30 +191,30 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
           </pre>
         </div>
       ) : (
-        <code className={`${className} bg-gray-100 px-1 py-0.5 rounded`} {...props}>
+        <code className={`${className} bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded`} {...props}>
           {children}
         </code>
       );
     },
     // Enhanced styling for headings
-    h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mt-8 mb-4" {...props} />,
-    h2: ({ node, ...props }) => <h2 className="text-2xl font-bold mt-6 mb-3" {...props} />,
-    h3: ({ node, ...props }) => <h3 className="text-xl font-semibold mt-5 mb-2" {...props} />,
-    h4: ({ node, ...props }) => <h4 className="text-lg font-semibold mt-4 mb-2" {...props} />,
+    h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mt-8 mb-4 text-gray-900 dark:text-white" {...props} />,
+    h2: ({ node, ...props }) => <h2 className="text-2xl font-bold mt-6 mb-3 text-gray-900 dark:text-white" {...props} />,
+    h3: ({ node, ...props }) => <h3 className="text-xl font-semibold mt-5 mb-2 text-gray-900 dark:text-white" {...props} />,
+    h4: ({ node, ...props }) => <h4 className="text-lg font-semibold mt-4 mb-2 text-gray-900 dark:text-white" {...props} />,
     // Style for paragraphs
-    p: ({ node, ...props }) => <p className="my-3 text-gray-800 leading-relaxed" {...props} />,
+    p: ({ node, ...props }) => <p className="my-3 text-gray-800 dark:text-gray-200 leading-relaxed" {...props} />,
     // Style for lists
-    ul: ({ node, ...props }) => <ul className="list-disc pl-6 my-3" {...props} />,
-    ol: ({ node, ...props }) => <ol className="list-decimal pl-6 my-3" {...props} />,
+    ul: ({ node, ...props }) => <ul className="list-disc pl-6 my-3 text-gray-800 dark:text-gray-200" {...props} />,
+    ol: ({ node, ...props }) => <ol className="list-decimal pl-6 my-3 text-gray-800 dark:text-gray-200" {...props} />,
     li: ({ node, ...props }) => <li className="my-1" {...props} />,
     // Style for blockquotes
     blockquote: ({ node, ...props }) => (
-      <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4 text-gray-600" {...props} />
+      <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />
     ),
     // Enhanced styling for strong (bold)
-    strong: ({ node, ...props }) => <strong className="font-bold text-gray-900" {...props} />,
+    strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
     // Enhanced styling for emphasis (italics)
-    em: ({ node, ...props }) => <em className="italic text-gray-900" {...props} />,
+    em: ({ node, ...props }) => <em className="italic text-gray-900 dark:text-white" {...props} />,
   };
 
   // Function to process text and add hyperlinks for PDB, PubMed and UniProt IDs
@@ -230,11 +259,11 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
   if (isLocalLoading) {
     return (
       <div className="max-w-5xl mx-auto p-6 text-center">
-        <h2 className="text-2xl font-bold mb-6">Research Report</h2>
+        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Research Report</h2>
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-lg text-gray-700">Generating comprehensive research report...</p>
-          <p className="text-sm text-gray-500 mt-2">This may take a few moments to complete</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-pharma-blue dark:border-pharma-teal mb-4"></div>
+          <p className="text-lg text-gray-700 dark:text-gray-200">Generating comprehensive research report...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This may take a few minutes to complete</p>
         </div>
       </div>
     );
@@ -244,15 +273,23 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
   if (error) {
     return (
       <div className="max-w-5xl mx-auto p-6">
-        <h2 className="text-2xl font-bold mb-6">Research Report</h2>
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-          <h3 className="text-red-800 font-medium">Error</h3>
-          <p className="text-red-700 mt-2">{error}</p>
+        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Research Report</h2>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 mb-6">
+          <h3 className="text-red-800 dark:text-red-300 font-medium">Error</h3>
+          <p className="text-red-700 dark:text-red-400 mt-2">{error}</p>
           <button
             onClick={fetchReport}
-            className="mt-4 bg-red-100 text-red-800 px-4 py-2 rounded-md hover:bg-red-200"
+            className="mt-4 bg-red-100 dark:bg-red-800/30 text-red-800 dark:text-red-300 px-4 py-2 rounded-md hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
           >
             Try Again
+          </button>
+        </div>
+        <div className="flex justify-between">
+          <button
+            onClick={onBack}
+            className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            Back to PDB Filtering
           </button>
         </div>
       </div>
@@ -263,15 +300,15 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
   if (!report) {
     return (
       <div className="max-w-5xl mx-auto p-6">
-        <h2 className="text-2xl font-bold mb-6">Research Report</h2>
-        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-          <div className="bg-blue-50 inline-block rounded-full p-4 mb-4">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Research Report</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center">
+          <div className="bg-pharma-blue/10 dark:bg-pharma-teal/10 inline-block rounded-full p-4 mb-4">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-pharma-blue dark:text-pharma-teal">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h3 className="text-lg font-semibold">Preparing Research Report</h3>
-          <p className="text-gray-600 mt-2">Please wait while we generate your comprehensive research report.</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Preparing Research Report</h3>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">Please wait while we generate your comprehensive research report.</p>
         </div>
       </div>
     );
@@ -279,67 +316,52 @@ const ResearchReport = ({ data, setIsLoading, onBack }) => {
 
   return (
     <div className="max-w-5xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Research Report</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={handleDownloadAllDataCSV}
-            className="flex items-center bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-            Download CSV
-          </button>
+      <div className="flex flex-col-reverse md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+          <span className="text-xl mr-2">📊</span>
+          Research Report: {data.projectName || data.disease}
+        </h2>
+        
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={handleDownloadPDF}
-            className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+            className="inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
             Download PDF
           </button>
+          
+          <button
+            onClick={handleDownloadAllDataCSV}
+            className="inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Export Data CSV
+          </button>
         </div>
       </div>
-
-      <div className="bg-white rounded-lg shadow-sm p-8" ref={reportRef}>
-        <div className="prose prose-lg max-w-none">
-          {report.info_section && (
-            <div className="mb-8">
-              <ReactMarkdown 
-                remarkPlugins={[remarkGfm]} 
-                components={components}
-              >
-                {processMarkdownText(report.info_section)}
-              </ReactMarkdown>
-            </div>
-          )}
-
-          {report.target_section && (
-            <div>
-              <ReactMarkdown 
-                remarkPlugins={[remarkGfm]} 
-                components={components}
-              >
-                {processMarkdownText(processTargetSection(report.target_section))}
-              </ReactMarkdown>
-            </div>
-          )}
+      
+      <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6 overflow-hidden">
+        <div className="prose dark:prose-invert max-w-none">
+          <ReactMarkdown 
+            children={processMarkdownText(getReportContent())}
+            remarkPlugins={[remarkGfm]}
+            components={components}
+          />
         </div>
       </div>
-
-      <div className="mt-8 flex justify-between items-center">
+      
+      <div className="flex justify-between">
         <button
           onClick={onBack}
-          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200"
+          className="btn-secondary"
         >
           Back to PDB Filtering
         </button>
-        <div className="text-center text-gray-500 text-sm">
-          <p>This report was automatically generated based on analysis of the disease and identified targets.</p>
-          <p className="mt-1">© {new Date().getFullYear()} AI Drug Discovery Pipeline</p>
-        </div>
       </div>
     </div>
   );

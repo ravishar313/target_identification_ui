@@ -140,12 +140,15 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
   // Display loading state
   if (isLocalLoading) {
     return (
-      <div className="max-w-5xl mx-auto p-6 text-center">
-        <h2 className="text-2xl font-bold mb-6">Target Filtering</h2>
+      <div className="w-full p-4">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+          <span className="molecule-icon text-xl mr-2">🎯</span>
+          Target Filtering
+        </h2>
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-lg text-gray-700">Analyzing potential targets...</p>
-          <p className="text-sm text-gray-500 mt-2">This may take 1-5 minutes to complete</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-pharma-blue dark:border-pharma-teal mb-4"></div>
+          <p className="text-lg text-gray-700 dark:text-gray-200">Analyzing potential targets...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This may take 1-5 minutes to complete</p>
         </div>
       </div>
     );
@@ -154,14 +157,17 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
   // Display error state
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
-        <h2 className="text-2xl font-bold mb-6">Target Filtering</h2>
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-          <h3 className="text-red-800 font-medium">Error</h3>
-          <p className="text-red-700 mt-2">{error}</p>
+      <div className="w-full p-4">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+          <span className="molecule-icon text-xl mr-2">🎯</span>
+          Target Filtering
+        </h2>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 mb-6">
+          <h3 className="text-red-800 dark:text-red-300 font-medium">Error</h3>
+          <p className="text-red-700 dark:text-red-400 mt-2">{error}</p>
           <button
             onClick={fetchPotentialTargets}
-            className="mt-4 bg-red-100 text-red-800 px-4 py-2 rounded-md hover:bg-red-200"
+            className="mt-4 bg-red-100 dark:bg-red-800/30 text-red-800 dark:text-red-300 px-4 py-2 rounded-md hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
           >
             Try Again
           </button>
@@ -169,7 +175,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
         <div className="flex justify-between">
           <button
             onClick={onBack}
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200"
+            className="btn-secondary"
           >
             Back to Disease Expert Analysis
           </button>
@@ -181,49 +187,52 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
   // If no targets data yet, show fetch button
   if (!potentialTargets.length) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
-        <h2 className="text-2xl font-bold mb-6">Target Filtering</h2>
-        <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="w-full p-4">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+          <span className="molecule-icon text-xl mr-2">🎯</span>
+          Target Filtering
+        </h2>
+        <div className="card">
           <div className="text-center mb-8">
-            <div className="bg-blue-50 inline-block rounded-full p-4 mb-4">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9.75 17L9 20L8 21H16L15 20L14.25 17M12 3C14.7614 3 17 5.23858 17 8C17 9.6356 16.2147 11.0878 15 12L14 12.5V14H10L10 12.5L9 12C7.78555 11.0878 7 9.6356 7 8C7 5.23858 9.23858 3 12 3Z" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <div className="bg-pharma-blue/10 dark:bg-pharma-teal/10 inline-block rounded-full p-4 mb-4">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-pharma-blue dark:text-pharma-teal">
+                <path d="M9.75 17L9 20L8 21H16L15 20L14.25 17M12 3C14.7614 3 17 5.23858 17 8C17 9.6356 16.2147 11.0878 15 12L14 12.5V14H10L10 12.5L9 12C7.78555 11.0878 7 9.6356 7 8C7 5.23858 9.23858 3 12 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <h3 className="text-lg font-semibold">Ready to Find Potential Targets</h3>
-            <p className="text-gray-600 mt-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ready to Find Potential Targets</h3>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
               Click the button below to analyze similar diseases and identify potential targets.
             </p>
           </div>
           
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-gray-700">Project Details</h4>
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-6 border border-gray-200 dark:border-gray-700">
+            <h4 className="font-medium text-gray-900 dark:text-white">Project Details</h4>
             <div className="mt-2 space-y-1">
-              <p className="text-sm"><span className="text-gray-500">Project Name:</span> {data.projectName}</p>
-              <p className="text-sm"><span className="text-gray-500">Disease:</span> {data.disease}</p>
-              <p className="text-sm"><span className="text-gray-500">Project ID:</span> {data.projectId}</p>
-              <p className="text-sm"><span className="text-gray-500">Similar Diseases:</span> {data.similarDiseases?.length || 0}</p>
+              <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Project Name:</span> <span className="text-gray-900 dark:text-white">{data.projectName}</span></p>
+              <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Disease:</span> <span className="text-gray-900 dark:text-white">{data.disease}</span></p>
+              <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Project ID:</span> <span className="text-gray-900 dark:text-white">{data.projectId}</span></p>
+              <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Similar Diseases:</span> <span className="text-gray-900 dark:text-white">{data.similarDiseases?.length || 0}</span></p>
             </div>
           </div>
           
           <div className="flex flex-col items-center">
             <button
               onClick={fetchPotentialTargets}
-              className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center"
+              className="btn-primary flex items-center px-6 py-3"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
               </svg>
               Find Potential Targets
             </button>
-            <p className="text-sm text-gray-500 mt-2">This process will take approximately 1-5 minutes</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This process will take approximately 1-5 minutes</p>
           </div>
         </div>
         
         <div className="flex justify-between mt-8">
           <button
             onClick={onBack}
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200"
+            className="btn-secondary"
           >
             Back
           </button>
@@ -234,13 +243,16 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
 
   // Display results in a table
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="w-full p-4">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Target Filtering</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center">
+          <span className="molecule-icon text-xl mr-2">🎯</span>
+          Target Filtering
+        </h2>
         {potentialTargets && potentialTargets.length > 0 && (
           <button
             onClick={handleDownloadCSV}
-            className="flex items-center bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+            className="flex items-center bg-pharma-green dark:bg-pharma-teal text-white px-4 py-2 rounded-md hover:bg-opacity-90 transition-colors"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -261,9 +273,9 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full p-2 pl-8 border border-gray-300 rounded-md"
+              className="input-field w-full p-2 pl-8 pr-2"
             />
-            <div className="absolute left-2 top-2.5 text-gray-400">
+            <div className="absolute left-2 top-2.5 text-gray-400 dark:text-gray-500">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
@@ -276,7 +288,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 setFilterGoodTargets(e.target.value);
                 setCurrentPage(1);
               }}
-              className="p-2 border border-gray-300 rounded-md bg-white"
+              className="input-field p-2"
             >
               <option value="all">All Targets</option>
               <option value="good">Good Targets Only</option>
@@ -284,18 +296,18 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
             </select>
           </div>
         </div>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 dark:text-gray-300">
           Found {potentialTargets.length} potential targets
         </div>
       </div>
 
       {/* Targets Table */}
-      <div className="bg-white rounded-lg border shadow-sm overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="card overflow-x-auto border border-gray-200 dark:border-gray-700 p-0">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
                 onClick={() => handleSort('id')}
               >
                 <div className="flex items-center">
@@ -308,7 +320,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 </div>
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center">
@@ -321,7 +333,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 </div>
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
                 onClick={() => handleSort('isGood')}
               >
                 <div className="flex items-center">
@@ -333,60 +345,60 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                   )}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 PDB IDs
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {getCurrentPageTargets().map((target) => (
               <tr key={target.target_id} 
                 className={`
-                  ${target.is_good_target ? 'bg-green-50' : 'bg-red-50'}
-                  ${selectedTarget === target ? 'border border-blue-500' : ''}
-                  hover:bg-gray-50
+                  ${target.is_good_target ? 'bg-pharma-green/5 dark:bg-pharma-green/10' : 'bg-pharma-red/5 dark:bg-pharma-red/10'}
+                  ${selectedTarget === target ? 'border border-pharma-blue dark:border-pharma-teal' : ''}
+                  hover:bg-gray-50 dark:hover:bg-gray-700/50
                 `}
               >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                   {target.target_id}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                   {target.name}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {target.is_good_target ? (
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-pharma-green/20 text-pharma-green dark:bg-pharma-green/20 dark:text-pharma-green">
                       Good Target
                     </span>
                   ) : (
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-pharma-red/20 text-pharma-red dark:bg-pharma-red/20 dark:text-pharma-red">
                       Not Suitable
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                   <div className="flex flex-wrap gap-1">
                     {target.pdb_ids && target.pdb_ids.length > 0 ? (
                       target.pdb_ids.slice(0, 3).map((pdb, idx) => (
-                        <span key={idx} className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                        <span key={idx} className="px-2 py-1 text-xs bg-pharma-blue/10 text-pharma-blue dark:bg-pharma-teal/10 dark:text-pharma-teal rounded-full">
                           {pdb}
                         </span>
                       ))
                     ) : (
-                      <span className="text-xs text-gray-500">None</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">None</span>
                     )}
                     {target.pdb_ids && target.pdb_ids.length > 3 && (
-                      <span className="text-xs text-gray-500">+{target.pdb_ids.length - 3} more</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">+{target.pdb_ids.length - 3} more</span>
                     )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
                     onClick={() => setSelectedTarget(selectedTarget === target ? null : target)}
-                    className="text-blue-600 hover:text-blue-900"
+                    className="text-pharma-blue dark:text-pharma-teal hover:text-pharma-blue/70 dark:hover:text-pharma-teal/70"
                   >
                     {selectedTarget === target ? 'Hide Details' : 'View Details'}
                   </button>
@@ -399,26 +411,26 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4 rounded-lg">
+        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 mt-4 rounded-lg shadow-sm">
           <div className="flex flex-1 justify-between sm:hidden">
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`relative inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${currentPage === 1 ? 'text-gray-300' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`relative inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${currentPage === 1 ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >
               Previous
             </button>
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`relative ml-3 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${currentPage === totalPages ? 'text-gray-300' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`relative ml-3 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${currentPage === totalPages ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >
               Next
             </button>
           </div>
           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 Showing <span className="font-medium">{(currentPage - 1) * targetsPerPage + 1}</span> to{' '}
                 <span className="font-medium">
                   {Math.min(currentPage * targetsPerPage, getFilteredAndSortedTargets().length)}
@@ -431,7 +443,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 <button
                   onClick={() => goToPage(1)}
                   disabled={currentPage === 1}
-                  className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ${currentPage === 1 ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                  className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 dark:text-gray-500 ${currentPage === 1 ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                 >
                   <span className="sr-only">First</span>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -441,7 +453,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`relative inline-flex items-center px-2 py-2 text-gray-400 ${currentPage === 1 ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                  className={`relative inline-flex items-center px-2 py-2 text-gray-400 dark:text-gray-500 ${currentPage === 1 ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                 >
                   <span className="sr-only">Previous</span>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -460,8 +472,8 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                         onClick={() => goToPage(i + 1)}
                         className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                           currentPage === i + 1
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'text-gray-500 hover:bg-gray-50'
+                            ? 'z-10 bg-pharma-blue/10 dark:bg-pharma-teal/10 border-pharma-blue dark:border-pharma-teal text-pharma-blue dark:text-pharma-teal'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                         }`}
                       >
                         {i + 1}
@@ -469,7 +481,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                     );
                   } else if (i + 1 === currentPage - 3 || i + 1 === currentPage + 3) {
                     return (
-                      <span key={i} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700">
+                      <span key={i} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                         ...
                       </span>
                     );
@@ -480,7 +492,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`relative inline-flex items-center px-2 py-2 text-gray-400 ${currentPage === totalPages ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                  className={`relative inline-flex items-center px-2 py-2 text-gray-400 dark:text-gray-500 ${currentPage === totalPages ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                 >
                   <span className="sr-only">Next</span>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -490,7 +502,7 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
                 <button
                   onClick={() => goToPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ${currentPage === totalPages ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                  className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 dark:text-gray-500 ${currentPage === totalPages ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                 >
                   <span className="sr-only">Last</span>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -505,56 +517,59 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
 
       {/* Selected Target Details */}
       {selectedTarget && (
-        <div className="mt-6 bg-white rounded-lg border shadow-sm p-6">
-          <h3 className="text-lg font-semibold mb-4">Target Details</h3>
+        <div className="mt-6 card border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span className="molecule-icon text-xl mr-2">🔬</span>
+            Target Details
+          </h3>
           
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-500">Target ID</h4>
-                <p className="text-gray-900">{selectedTarget.target_id}</p>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Target ID</h4>
+                <p className="text-gray-900 dark:text-white">{selectedTarget.target_id}</p>
               </div>
               
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-500">Name</h4>
-                <p className="text-gray-900">{selectedTarget.name}</p>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</h4>
+                <p className="text-gray-900 dark:text-white">{selectedTarget.name}</p>
               </div>
               
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-500">Status</h4>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
                 <p className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   selectedTarget.is_good_target 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
+                    ? 'bg-pharma-green/20 text-pharma-green dark:bg-pharma-green/20 dark:text-pharma-green' 
+                    : 'bg-pharma-red/20 text-pharma-red dark:bg-pharma-red/20 dark:text-pharma-red'
                 }`}>
                   {selectedTarget.is_good_target ? 'Good Target' : 'Not Suitable'}
                 </p>
               </div>
               
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-500">Function</h4>
-                <p className="text-gray-900">{selectedTarget.function || 'Not specified'}</p>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Function</h4>
+                <p className="text-gray-900 dark:text-white">{selectedTarget.function || 'Not specified'}</p>
               </div>
             </div>
             
             <div>
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-500">Rationale</h4>
-                <p className="text-gray-900 text-sm">{selectedTarget.rationale}</p>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Rationale</h4>
+                <p className="text-gray-900 dark:text-white text-sm">{selectedTarget.rationale}</p>
               </div>
               
               <div>
-                <h4 className="text-sm font-medium text-gray-500">PDB IDs</h4>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">PDB IDs</h4>
                 {selectedTarget.pdb_ids && selectedTarget.pdb_ids.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {selectedTarget.pdb_ids.map((pdb, idx) => (
-                      <span key={idx} className="px-2.5 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
+                      <span key={idx} className="px-2.5 py-0.5 bg-pharma-blue/10 text-pharma-blue dark:bg-pharma-teal/10 dark:text-pharma-teal rounded-full text-xs">
                         {pdb}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm">No PDB IDs available</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No PDB IDs available</p>
                 )}
               </div>
             </div>
@@ -565,13 +580,13 @@ const TargetFiltering = ({ onNext, onBack, data, setData, setIsLoading }) => {
       <div className="flex justify-between mt-8">
         <button
           onClick={onBack}
-          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200"
+          className="btn-secondary"
         >
           Back
         </button>
         <button
           onClick={onNext}
-          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+          className="btn-primary"
         >
           Proceed to PDB Filtering
         </button>

@@ -31,39 +31,23 @@ const PDBViewer = ({ pdbId, width = 400, height = 400 }) => {
   // Convert height to proper CSS value
   const heightStyle = typeof height === 'string' ? height : `${height}px`;
 
-  // Additional style for 100% height to work properly
-  const containerStyle = {
-    width: widthStyle,
-    height: heightStyle,
-    position: 'relative',
-    border: '1px solid #e2e8f0',
-    borderRadius: '0.375rem',
-    overflow: 'hidden',
-    margin: '0 auto',
-    display: 'flex',
-    flexDirection: 'column'
-  };
-
-  // Use position absolute for the iframe to fill the container completely
-  const iframeStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    border: 'none'
-  };
-
   return (
     <div 
       ref={containerRef} 
-      style={containerStyle} 
+      className="relative overflow-hidden flex flex-col mx-auto rounded-lg border dark:border-gray-700 shadow-molecule bg-white dark:bg-gray-800"
+      style={{ 
+        width: widthStyle, 
+        height: heightStyle
+      }}
       data-pdb-id={pdbId}
     >
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="molecule-icon text-4xl opacity-20">🧪</div>
+      </div>
       <iframe
         ref={iframeRef}
         src={getMolstarUrl(pdbId)}
-        style={iframeStyle}
+        className="absolute inset-0 w-full h-full border-none"
         title={`Mol* visualization of ${pdbId}`}
         allowFullScreen
         loading="eager"
