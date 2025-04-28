@@ -229,7 +229,7 @@ const ProjectPDBSelection = ({ onNext, onBack, data, setData }) => {
                       <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{pdb.target_name}</div>
                       {!pdb.good_structure && (
                         <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                          ⚠️ Structure may have quality issues
+                          Not preferred target structure
                         </div>
                       )}
                     </li>
