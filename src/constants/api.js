@@ -9,4 +9,10 @@ export const endpoints = {
   getPotentialTargetsUrl: `${BaseUrl}/get_potential_targets`,
   pdbFilteringUrl: `${BaseUrl}/pdb_filtering`,
   generateReportUrl: `${BaseUrl}/generate_report`,
+  
+  // Lead Identification endpoints
+  getLeadPDBsUrl: `${BaseUrl}/lead_identification/get_pdbs`,
+  diseaseCharacteristicsUrl: `${BaseUrl}/lead_identification/disease_characteristics`,
+  targetCharacteristicsUrl: `${BaseUrl}/lead_identification/target_characteristics`,
+  pocketCharacteristicsUrl: `${BaseUrl}/lead_identification/pocket_characteristics`,
 }; 
