@@ -8,6 +8,7 @@ const Sidebar = ({ activeModule, setActiveModule }) => {
     { id: 'lead-identification', name: 'Lead Identification', icon: '🔍' },
     { id: 'lead-optimization', name: 'Lead Optimization', icon: '⚗️' },
     { id: 'pcc-evaluation', name: 'PCC Evaluation', icon: '📊' },
+    { id: 'pymol-chat', name: 'PyMol Chat', icon: '💬' },
   ];
 
   return (
