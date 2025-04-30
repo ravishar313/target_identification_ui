@@ -1,6 +1,18 @@
+import { useEffect, useState } from 'react';
 import PyMolChat from '../../components/PyMolChat';
 
-const PyMolChatPage = () => {
+const PyMolChatPage = ({ activeModule }) => {
+  // This key will force the PyMolChat component to remount
+  // whenever the tab is switched to this page
+  const [chatKey, setChatKey] = useState(Date.now());
+  
+  // Set a new key whenever this page becomes active
+  useEffect(() => {
+    if (activeModule === 'pymol-chat') {
+      setChatKey(Date.now());
+    }
+  }, [activeModule]);
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       <div className="p-4 bg-gray-900 border-b border-gray-700">
@@ -9,7 +21,7 @@ const PyMolChatPage = () => {
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <PyMolChat />
+        <PyMolChat key={chatKey} />
       </div>
     </div>
   );

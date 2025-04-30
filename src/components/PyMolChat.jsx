@@ -1,18 +1,43 @@
 import { useState, useEffect, useRef } from 'react';
 import { endpoints } from '../constants/api';
 
+const quirkyLoadingMessages = [
+  "Asking the protein to strike a pose...",
+  "Convincing molecules to socialize...",
+  "Translating from human to PyMol...",
+  "Folding proteins and folding laundry...",
+  "Teaching old proteins new tricks...",
+  "Spinning up the molecular dance floor...",
+  "Consulting the oracle of biochemistry...",
+  "Negotiating with stubborn ligands...",
+  "Doing molecular gymnastics...",
+  "Untangling the protein spaghetti..."
+];
+
 const PyMolChat = () => {
   const [connection, setConnection] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [inputMessage, setInputMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const chatContainerRef = useRef(null);
+  const mountedRef = useRef(false);
 
-  // Check connection status when component mounts
+  // Clear chat when component mounts (tab is switched to)
   useEffect(() => {
-    checkConnectionStatus();
+    // Only clear if this isn't the first mount
+    if (mountedRef.current) {
+      setChatHistory([]);
+    } else {
+      mountedRef.current = true;
+    }
+
+    // Cleanup function for when component unmounts
+    return () => {
+      // We don't reset mountedRef here so we can detect when the component is re-mounted
+    };
   }, []);
 
   // Scroll to bottom of chat when chat history updates
@@ -45,9 +70,23 @@ const PyMolChat = () => {
     }
   };
 
+  // Handle key press in textarea
+  const handleKeyPress = (e) => {
+    // Add new line with Shift+Enter
+    if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      setInputMessage(prev => prev + '\n');
+    } 
+    // Send message with Enter (without Shift)
+    else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
   // Function to send a message to PyMol
   const sendMessage = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
     if (!inputMessage.trim() || isProcessing) return;
     
@@ -58,6 +97,9 @@ const PyMolChat = () => {
     // Clear input and set processing state
     setInputMessage('');
     setIsProcessing(true);
+    
+    // Set a random quirky loading message
+    setLoadingMessage(quirkyLoadingMessages[Math.floor(Math.random() * quirkyLoadingMessages.length)]);
     
     try {
       // Send query to PyMol
@@ -107,6 +149,7 @@ const PyMolChat = () => {
       setError('Failed to send message: ' + err.message);
     } finally {
       setIsProcessing(false);
+      setLoadingMessage('');
     }
   };
 
@@ -188,12 +231,21 @@ const PyMolChat = () => {
               <span className="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
               Connected
             </span>
-          ) : (
+          ) : connection === 'error' ? (
             <span className="flex items-center text-sm text-red-400">
               <span className="w-2 h-2 bg-red-400 rounded-full mr-1"></span>
               Disconnected
             </span>
+          ) : (
+            <span className="text-sm text-gray-400">Not Checked</span>
           )}
+          <button 
+            onClick={checkConnectionStatus}
+            className="ml-3 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded"
+            disabled={loading}
+          >
+            {loading ? 'Checking...' : 'Check Connection'}
+          </button>
         </div>
       </div>
       
@@ -220,30 +272,56 @@ const PyMolChat = () => {
           <div className="h-full flex flex-col items-center justify-center text-gray-400">
             <p className="text-center mb-2">Send a message to start interacting with PyMol</p>
             <p className="text-center text-sm">Example: "Load protein 1crn and show it as cartoon"</p>
+            <button
+              onClick={checkConnectionStatus}
+              className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+              disabled={loading}
+            >
+              {loading ? 'Checking Connection...' : 'Check PyMol Connection'}
+            </button>
           </div>
         ) : (
-          chatHistory.map(renderChatMessage)
+          <>
+            {chatHistory.map(renderChatMessage)}
+            
+            {/* Processing Loader */}
+            {isProcessing && (
+              <div className="flex items-center space-x-3 text-left text-gray-400 animate-pulse">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+                <p>{loadingMessage}</p>
+              </div>
+            )}
+          </>
         )}
       </div>
       
       {/* Input Area */}
       <div className="p-4 bg-gray-800 border-t border-gray-700">
-        <form onSubmit={sendMessage} className="flex items-center">
-          <input
-            type="text"
+        <form onSubmit={sendMessage} className="flex flex-col">
+          <textarea
             value={inputMessage}
             onChange={e => setInputMessage(e.target.value)}
-            placeholder="Type your PyMol command or question..."
-            className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-l-md border border-gray-600 focus:outline-none focus:border-blue-500"
+            onKeyDown={handleKeyPress}
+            placeholder="Type your PyMol command or question... (Shift+Enter for new line, Enter to send)"
+            className="w-full px-4 py-2 bg-gray-700 text-white rounded-t-md border border-gray-600 focus:outline-none focus:border-blue-500 min-h-[80px] resize-none"
             disabled={loading || connection !== 'established' || isProcessing}
           />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-r-md disabled:bg-gray-600 disabled:cursor-not-allowed transition"
-            disabled={loading || connection !== 'established' || !inputMessage.trim() || isProcessing}
-          >
-            {isProcessing ? 'Processing...' : 'Send'}
-          </button>
+          <div className="flex items-center justify-between bg-gray-700 border-t-0 border border-gray-600 rounded-b-md px-4 py-2">
+            <div className="text-xs text-gray-400">
+              Press <kbd className="px-1 py-0.5 bg-gray-600 rounded">Shift</kbd> + <kbd className="px-1 py-0.5 bg-gray-600 rounded">Enter</kbd> for new line
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed transition"
+              disabled={loading || connection !== 'established' || !inputMessage.trim() || isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Send'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
