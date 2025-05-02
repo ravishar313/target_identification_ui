@@ -39,7 +39,7 @@ const MainLayout = ({ children }) => {
         <header className="bg-pharma-blue dark:bg-gray-800 shadow-md">
           <div className="px-4 py-4">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-white">MoleculeAI Discovery</h1>
+              <h1 className="text-2xl font-bold text-white">Fluent.Bio</h1>
               
               {/* Dark Mode Toggle */}
               <button 
@@ -72,7 +72,7 @@ const MainLayout = ({ children }) => {
         <footer className="bg-gray-100 dark:bg-gray-800 py-4 border-t border-gray-200 dark:border-gray-700">
           <div className="px-4">
             <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">© 2023 MoleculeAI Discovery. All rights reserved.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">© 2025 Fluent.Bio. All rights reserved.</p>
               <div className="flex space-x-4">
                 <a href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-pharma-blue dark:hover:text-pharma-teal">Privacy Policy</a>
                 <a href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-pharma-blue dark:hover:text-pharma-teal">Terms of Service</a>

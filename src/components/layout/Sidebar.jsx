@@ -19,7 +19,7 @@ const Sidebar = ({ activeModule, setActiveModule }) => {
     >
       <div className="p-4 flex items-center justify-between border-b border-blue-700 dark:border-gray-700">
         {!collapsed && (
-          <h2 className="text-xl font-bold">MoleculeAI</h2>
+          <h2 className="text-xl font-bold">Fluent.Bio</h2>
         )}
         <button 
           className="p-1 rounded hover:bg-blue-700 dark:hover:bg-gray-700"
