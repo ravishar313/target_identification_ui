@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { endpoints } from '../constants/api';
 
 const LigandDesign = ({ data, onNext, onBack }) => {
@@ -17,6 +17,20 @@ const LigandDesign = ({ data, onNext, onBack }) => {
   const [propertiesError, setPropertiesError] = useState(null);
   const [leadsProperties, setLeadsProperties] = useState({});
   const [loadingLeadsProperties, setLoadingLeadsProperties] = useState(false);
+  
+  // Sort and filter states
+  const [sortOption, setSortOption] = useState('none');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    molecularWeight: { min: 0, max: 1000, enabled: false },
+    logP: { min: -10, max: 10, enabled: false },
+    hbondDonors: { min: 0, max: 10, enabled: false },
+    hbondAcceptors: { min: 0, max: 20, enabled: false },
+    qed: { min: 0, max: 1, enabled: false },
+    lipinskiCompliant: { enabled: false, value: true }
+  });
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Function to submit lead design job
   const submitLeadDesignJob = async () => {
@@ -239,6 +253,199 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     }
     return value;
   };
+  
+  // Handle sort option change
+  const handleSortChange = (option) => {
+    if (sortOption === option) {
+      // Toggle direction if clicking the same option
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortOption(option);
+      setSortDirection('asc');
+    }
+  };
+  
+  // Handle filter change
+  const handleFilterChange = (category, field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [field]: value
+      }
+    }));
+  };
+  
+  // Toggle filter enabled state
+  const toggleFilter = (category) => {
+    setFilters(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        enabled: !prev[category].enabled
+      }
+    }));
+  };
+  
+  // Reset all filters
+  const resetFilters = () => {
+    setFilters({
+      molecularWeight: { min: 0, max: 1000, enabled: false },
+      logP: { min: -10, max: 10, enabled: false },
+      hbondDonors: { min: 0, max: 10, enabled: false },
+      hbondAcceptors: { min: 0, max: 20, enabled: false },
+      qed: { min: 0, max: 1, enabled: false },
+      lipinskiCompliant: { enabled: false, value: true }
+    });
+    setSearchQuery('');
+    setSortOption('none');
+    setSortDirection('asc');
+  };
+  
+  // Check if a lead matches the search query
+  const matchesSearchQuery = (smiles, moleculeProps) => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    const props = moleculeProps?.properties;
+    
+    if (!props) return false;
+    
+    // Search in SMILES
+    if (smiles.toLowerCase().includes(query)) return true;
+    
+    // Search in formula
+    if (props['Molecular Formula'].toLowerCase().includes(query)) return true;
+    
+    return false;
+  };
+  
+  // Check if a lead passes all filters
+  const passesFilters = (smiles, moleculeProps) => {
+    if (!moleculeProps) return false;
+    
+    const props = moleculeProps.properties;
+    
+    // Molecular Weight filter
+    if (filters.molecularWeight.enabled) {
+      const mw = props['Molecular Weight'];
+      if (mw < filters.molecularWeight.min || mw > filters.molecularWeight.max) {
+        return false;
+      }
+    }
+    
+    // LogP filter
+    if (filters.logP.enabled) {
+      const logP = props['LogP'];
+      if (logP < filters.logP.min || logP > filters.logP.max) {
+        return false;
+      }
+    }
+    
+    // H-Bond Donors filter
+    if (filters.hbondDonors.enabled) {
+      const donors = props['H-Bond Donors'];
+      if (donors < filters.hbondDonors.min || donors > filters.hbondDonors.max) {
+        return false;
+      }
+    }
+    
+    // H-Bond Acceptors filter
+    if (filters.hbondAcceptors.enabled) {
+      const acceptors = props['H-Bond Acceptors'];
+      if (acceptors < filters.hbondAcceptors.min || acceptors > filters.hbondAcceptors.max) {
+        return false;
+      }
+    }
+    
+    // QED filter
+    if (filters.qed.enabled) {
+      const qed = props['QED'];
+      if (qed < filters.qed.min || qed > filters.qed.max) {
+        return false;
+      }
+    }
+    
+    // Lipinski's Rule of Five filter
+    if (filters.lipinskiCompliant.enabled) {
+      const isCompliant = (
+        props['Molecular Weight'] <= 500 &&
+        props['LogP'] <= 5 &&
+        props['H-Bond Donors'] <= 5 &&
+        props['H-Bond Acceptors'] <= 10
+      );
+      
+      if (isCompliant !== filters.lipinskiCompliant.value) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+  
+  // Get filtered and sorted leads
+  const filteredAndSortedLeads = useMemo(() => {
+    if (!leadData?.leads) return [];
+    
+    // Filter leads that have properties and match filters
+    const filtered = leadData.leads.filter(smiles => {
+      const props = leadsProperties[smiles];
+      return (
+        props && 
+        matchesSearchQuery(smiles, props) && 
+        passesFilters(smiles, props)
+      );
+    });
+    
+    // If no sort option, return filtered leads as is
+    if (sortOption === 'none') return filtered;
+    
+    // Sort leads based on selected option
+    return [...filtered].sort((a, b) => {
+      const propsA = leadsProperties[a]?.properties;
+      const propsB = leadsProperties[b]?.properties;
+      
+      // Skip if any lead doesn't have properties
+      if (!propsA || !propsB) return 0;
+      
+      let valueA, valueB;
+      
+      switch (sortOption) {
+        case 'mw':
+          valueA = propsA['Molecular Weight'];
+          valueB = propsB['Molecular Weight'];
+          break;
+        case 'logp':
+          valueA = propsA['LogP'];
+          valueB = propsB['LogP'];
+          break;
+        case 'donors':
+          valueA = propsA['H-Bond Donors'];
+          valueB = propsB['H-Bond Donors'];
+          break;
+        case 'acceptors':
+          valueA = propsA['H-Bond Acceptors'];
+          valueB = propsB['H-Bond Acceptors'];
+          break;
+        case 'qed':
+          valueA = propsA['QED'];
+          valueB = propsB['QED'];
+          break;
+        default:
+          return 0;
+      }
+      
+      // Apply sort direction
+      return sortDirection === 'asc' 
+        ? valueA - valueB 
+        : valueB - valueA;
+    });
+  }, [leadData, leadsProperties, sortOption, sortDirection, filters, searchQuery]);
+  
+  // Count of active filters
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filters).filter(f => f.enabled).length;
+  }, [filters]);
 
   // Render molecule details modal
   const renderMoleculeDetailsModal = () => {
@@ -582,6 +789,362 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     );
   };
 
+  // Render sort and filter controls
+  const renderSortAndFilterControls = () => {
+    if (!leadData?.leads || leadData.leads.length === 0) return null;
+    
+    return (
+      <div className="mb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3">
+          {/* Search input */}
+          <div className="relative w-full sm:w-auto mb-2 sm:mb-0">
+            <input
+              type="text"
+              placeholder="Search by SMILES or formula"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full sm:w-64 pl-8 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+            />
+            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          
+          <div className="flex space-x-2 w-full sm:w-auto">
+            {/* Sort dropdown */}
+            <div className="relative group">
+              <button
+                className="flex items-center px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
+              >
+                <svg className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                Sort: {sortOption === 'none' ? 'None' : sortOption.toUpperCase()}
+                {sortOption !== 'none' && (
+                  <span className="ml-1 text-gray-500">
+                    {sortDirection === 'asc' ? '↑' : '↓'}
+                  </span>
+                )}
+              </button>
+              <div className="absolute left-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10 hidden group-hover:block">
+                <div className="py-1">
+                  <button
+                    onClick={() => handleSortChange('none')}
+                    className={`block w-full text-left px-4 py-2 text-sm ${sortOption === 'none' ? 'bg-gray-100 dark:bg-gray-700 text-pharma-blue dark:text-pharma-teal' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  >
+                    None
+                  </button>
+                  <button
+                    onClick={() => handleSortChange('mw')}
+                    className={`block w-full text-left px-4 py-2 text-sm ${sortOption === 'mw' ? 'bg-gray-100 dark:bg-gray-700 text-pharma-blue dark:text-pharma-teal' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  >
+                    Molecular Weight {sortOption === 'mw' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </button>
+                  <button
+                    onClick={() => handleSortChange('logp')}
+                    className={`block w-full text-left px-4 py-2 text-sm ${sortOption === 'logp' ? 'bg-gray-100 dark:bg-gray-700 text-pharma-blue dark:text-pharma-teal' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  >
+                    LogP {sortOption === 'logp' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </button>
+                  <button
+                    onClick={() => handleSortChange('qed')}
+                    className={`block w-full text-left px-4 py-2 text-sm ${sortOption === 'qed' ? 'bg-gray-100 dark:bg-gray-700 text-pharma-blue dark:text-pharma-teal' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  >
+                    QED Score {sortOption === 'qed' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </button>
+                  <button
+                    onClick={() => handleSortChange('donors')}
+                    className={`block w-full text-left px-4 py-2 text-sm ${sortOption === 'donors' ? 'bg-gray-100 dark:bg-gray-700 text-pharma-blue dark:text-pharma-teal' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  >
+                    H-Bond Donors {sortOption === 'donors' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </button>
+                  <button
+                    onClick={() => handleSortChange('acceptors')}
+                    className={`block w-full text-left px-4 py-2 text-sm ${sortOption === 'acceptors' ? 'bg-gray-100 dark:bg-gray-700 text-pharma-blue dark:text-pharma-teal' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  >
+                    H-Bond Acceptors {sortOption === 'acceptors' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Filter button */}
+            <button
+              className={`flex items-center px-3 py-2 text-sm border rounded-md focus:outline-none ${
+                activeFilterCount > 0 
+                  ? 'border-pharma-blue dark:border-pharma-teal bg-pharma-blue/10 dark:bg-pharma-teal/10 text-pharma-blue dark:text-pharma-teal' 
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'
+              }`}
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filter
+              {activeFilterCount > 0 && (
+                <span className="ml-1 bg-pharma-blue dark:bg-pharma-teal text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            
+            {/* Reset button (only shown when filters are applied) */}
+            {(activeFilterCount > 0 || searchQuery || sortOption !== 'none') && (
+              <button
+                className="flex items-center px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
+                onClick={resetFilters}
+              >
+                <svg className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {/* Results count and filter panel toggler */}
+        <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+          <div>
+            Showing {filteredAndSortedLeads.length} of {leadData.leads.length} compounds
+          </div>
+        </div>
+        
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Molecular Weight filter */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.molecularWeight.enabled}
+                      onChange={() => toggleFilter('molecularWeight')}
+                      className="h-4 w-4 mr-2 rounded border-gray-300 text-pharma-blue dark:text-pharma-teal focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+                    />
+                    Molecular Weight
+                  </label>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {filters.molecularWeight.min} - {filters.molecularWeight.max}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    value={filters.molecularWeight.min}
+                    onChange={(e) => handleFilterChange('molecularWeight', 'min', parseFloat(e.target.value))}
+                    disabled={!filters.molecularWeight.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Min"
+                  />
+                  <input
+                    type="number"
+                    value={filters.molecularWeight.max}
+                    onChange={(e) => handleFilterChange('molecularWeight', 'max', parseFloat(e.target.value))}
+                    disabled={!filters.molecularWeight.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Max"
+                  />
+                </div>
+              </div>
+              
+              {/* LogP filter */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.logP.enabled}
+                      onChange={() => toggleFilter('logP')}
+                      className="h-4 w-4 mr-2 rounded border-gray-300 text-pharma-blue dark:text-pharma-teal focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+                    />
+                    LogP
+                  </label>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {filters.logP.min} - {filters.logP.max}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    value={filters.logP.min}
+                    onChange={(e) => handleFilterChange('logP', 'min', parseFloat(e.target.value))}
+                    disabled={!filters.logP.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Min"
+                  />
+                  <input
+                    type="number"
+                    value={filters.logP.max}
+                    onChange={(e) => handleFilterChange('logP', 'max', parseFloat(e.target.value))}
+                    disabled={!filters.logP.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Max"
+                  />
+                </div>
+              </div>
+              
+              {/* QED filter */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.qed.enabled}
+                      onChange={() => toggleFilter('qed')}
+                      className="h-4 w-4 mr-2 rounded border-gray-300 text-pharma-blue dark:text-pharma-teal focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+                    />
+                    QED Score
+                  </label>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {filters.qed.min} - {filters.qed.max}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    value={filters.qed.min}
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    onChange={(e) => handleFilterChange('qed', 'min', parseFloat(e.target.value))}
+                    disabled={!filters.qed.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Min"
+                  />
+                  <input
+                    type="number"
+                    value={filters.qed.max}
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    onChange={(e) => handleFilterChange('qed', 'max', parseFloat(e.target.value))}
+                    disabled={!filters.qed.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Max"
+                  />
+                </div>
+              </div>
+              
+              {/* H-Bond Donors filter */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.hbondDonors.enabled}
+                      onChange={() => toggleFilter('hbondDonors')}
+                      className="h-4 w-4 mr-2 rounded border-gray-300 text-pharma-blue dark:text-pharma-teal focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+                    />
+                    H-Bond Donors
+                  </label>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {filters.hbondDonors.min} - {filters.hbondDonors.max}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    value={filters.hbondDonors.min}
+                    onChange={(e) => handleFilterChange('hbondDonors', 'min', parseInt(e.target.value, 10))}
+                    disabled={!filters.hbondDonors.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Min"
+                  />
+                  <input
+                    type="number"
+                    value={filters.hbondDonors.max}
+                    onChange={(e) => handleFilterChange('hbondDonors', 'max', parseInt(e.target.value, 10))}
+                    disabled={!filters.hbondDonors.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Max"
+                  />
+                </div>
+              </div>
+              
+              {/* H-Bond Acceptors filter */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.hbondAcceptors.enabled}
+                      onChange={() => toggleFilter('hbondAcceptors')}
+                      className="h-4 w-4 mr-2 rounded border-gray-300 text-pharma-blue dark:text-pharma-teal focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+                    />
+                    H-Bond Acceptors
+                  </label>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {filters.hbondAcceptors.min} - {filters.hbondAcceptors.max}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    value={filters.hbondAcceptors.min}
+                    onChange={(e) => handleFilterChange('hbondAcceptors', 'min', parseInt(e.target.value, 10))}
+                    disabled={!filters.hbondAcceptors.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Min"
+                  />
+                  <input
+                    type="number"
+                    value={filters.hbondAcceptors.max}
+                    onChange={(e) => handleFilterChange('hbondAcceptors', 'max', parseInt(e.target.value, 10))}
+                    disabled={!filters.hbondAcceptors.enabled}
+                    className="block w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500"
+                    placeholder="Max"
+                  />
+                </div>
+              </div>
+              
+              {/* Lipinski compliant filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={filters.lipinskiCompliant.enabled}
+                    onChange={() => toggleFilter('lipinskiCompliant')}
+                    className="h-4 w-4 mr-2 rounded border-gray-300 text-pharma-blue dark:text-pharma-teal focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+                  />
+                  Lipinski's Rule of Five
+                </label>
+                <div className="flex items-center space-x-4">
+                  <label className="inline-flex items-center text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="radio"
+                      name="lipinski"
+                      checked={filters.lipinskiCompliant.value === true}
+                      onChange={() => handleFilterChange('lipinskiCompliant', 'value', true)}
+                      disabled={!filters.lipinskiCompliant.enabled}
+                      className="h-4 w-4 mr-2 rounded-full border-gray-300 text-pharma-blue dark:text-pharma-teal focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+                    />
+                    Compliant
+                  </label>
+                  <label className="inline-flex items-center text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="radio"
+                      name="lipinski"
+                      checked={filters.lipinskiCompliant.value === false}
+                      onChange={() => handleFilterChange('lipinskiCompliant', 'value', false)}
+                      disabled={!filters.lipinskiCompliant.enabled}
+                      className="h-4 w-4 mr-2 rounded-full border-gray-300 text-pharma-blue dark:text-pharma-teal focus:ring-pharma-blue dark:focus:ring-pharma-teal"
+                    />
+                    Non-compliant
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full">
       <div className="space-y-6">
@@ -703,6 +1266,9 @@ const LigandDesign = ({ data, onNext, onBack }) => {
               </div>
             )}
             
+            {/* Sort and filter controls */}
+            {leadData.status === 'completed' && renderSortAndFilterControls()}
+            
             {/* Lead compounds list */}
             {leadData.leads && leadData.leads.length > 0 ? (
               <div className="mt-4 max-h-[600px] overflow-y-auto p-1">
@@ -717,8 +1283,34 @@ const LigandDesign = ({ data, onNext, onBack }) => {
                   </div>
                 )}
                 
+                {leadData.status === 'completed' && filteredAndSortedLeads.length === 0 && !loadingLeadsProperties && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    <p className="text-lg font-medium">No matching compounds</p>
+                    <p className="mt-1">Try adjusting your filters or search criteria</p>
+                    <button 
+                      className="mt-3 inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-pharma-blue dark:text-pharma-teal hover:bg-gray-50 dark:hover:bg-gray-700"
+                      onClick={resetFilters}
+                    >
+                      <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Reset Filters
+                    </button>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {leadData.leads.map((smiles, index) => renderLeadCard(smiles, index))}
+                  {leadData.status === 'running' 
+                    ? leadData.leads.map((smiles, index) => renderLeadCard(smiles, index))
+                    : filteredAndSortedLeads.map((smiles, index) => {
+                        // Find the original index to preserve the lead number
+                        const originalIndex = leadData.leads.findIndex(s => s === smiles);
+                        return renderLeadCard(smiles, originalIndex);
+                      })
+                  }
                 </div>
               </div>
             ) : (
