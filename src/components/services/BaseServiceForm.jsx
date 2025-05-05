@@ -21,27 +21,50 @@ const BaseServiceForm = ({
   const [success, setSuccess] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Validate all required fields
+  const validateRequiredFields = () => {
+    const errors = {};
+    
+    // Validate job name
+    if (!jobName.trim()) {
+      errors.jobName = 'Job name is required';
+    }
+    
+    // Validate all required parameters
+    parameterFields?.forEach(field => {
+      if (field.required && (!parameters[field.name] || 
+          (typeof parameters[field.name] === 'string' && !parameters[field.name].trim()))) {
+        errors[field.name] = `${field.label} is required`;
+      }
+    });
+    
+    return errors;
+  };
+
   // Handle job submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate inputs
-    if (!jobName.trim()) {
-      setError('Job name is required');
+    // Clear previous errors
+    setError(null);
+    setValidationErrors({});
+    
+    // Validate required fields
+    const requiredFieldErrors = validateRequiredFields();
+    if (Object.keys(requiredFieldErrors).length > 0) {
+      setValidationErrors(requiredFieldErrors);
       return;
     }
-
+    
     // Validate service-specific parameters
-    const errors = validateParameters(parameters);
-    if (errors && Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
+    const paramErrors = validateParameters(parameters);
+    if (paramErrors && Object.keys(paramErrors).length > 0) {
+      setValidationErrors(paramErrors);
       return;
     }
 
     setLoading(true);
-    setError(null);
     setSuccess(null);
-    setValidationErrors({});
     
     try {
       const result = await createServiceJob(jobName, serviceType, parameters);
@@ -107,17 +130,30 @@ const BaseServiceForm = ({
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="jobName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Job Name
+            Job Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             id="jobName"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              validationErrors.jobName ? 'border-red-500' : ''
+            }`}
             placeholder="Enter a name for this job"
             value={jobName}
-            onChange={(e) => setJobName(e.target.value)}
-            required
+            onChange={(e) => {
+              setJobName(e.target.value);
+              if (validationErrors.jobName) {
+                setValidationErrors(prev => {
+                  const newErrors = { ...prev };
+                  delete newErrors.jobName;
+                  return newErrors;
+                });
+              }
+            }}
           />
+          {validationErrors.jobName && (
+            <p className="mt-1 text-sm text-red-600">{validationErrors.jobName}</p>
+          )}
         </div>
 
         {/* Render parameter fields */}
@@ -132,7 +168,7 @@ const BaseServiceForm = ({
                     htmlFor={field.name} 
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
-                    {field.label}
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
                   <textarea
                     id={field.name}
@@ -143,7 +179,6 @@ const BaseServiceForm = ({
                     placeholder={field.placeholder}
                     value={parameters[field.name] || ''}
                     onChange={(e) => handleParameterChange(field.name, e.target.value)}
-                    required={field.required}
                   />
                   {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
                   {field.helpText && (
@@ -159,7 +194,7 @@ const BaseServiceForm = ({
                     htmlFor={field.name} 
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
-                    {field.label}
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
                   <select
                     id={field.name}
@@ -168,7 +203,6 @@ const BaseServiceForm = ({
                     }`}
                     value={parameters[field.name] || ''}
                     onChange={(e) => handleParameterChange(field.name, e.target.value)}
-                    required={field.required}
                   >
                     <option value="">{field.placeholder || 'Select an option'}</option>
                     {field.options.map(option => (
@@ -198,7 +232,7 @@ const BaseServiceForm = ({
                   </div>
                   <div className="ml-3 text-sm">
                     <label htmlFor={field.name} className="font-medium text-gray-700 dark:text-gray-300">
-                      {field.label}
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
                     </label>
                     {field.helpText && (
                       <p className="text-xs text-gray-500 dark:text-gray-400">{field.helpText}</p>
@@ -215,7 +249,7 @@ const BaseServiceForm = ({
                     htmlFor={field.name} 
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
-                    {field.label}
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
                   <input
                     type={field.type || 'text'}
@@ -226,7 +260,6 @@ const BaseServiceForm = ({
                     placeholder={field.placeholder}
                     value={parameters[field.name] || ''}
                     onChange={(e) => handleParameterChange(field.name, e.target.value)}
-                    required={field.required}
                     min={field.min}
                     max={field.max}
                     step={field.step}

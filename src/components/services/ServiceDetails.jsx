@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { fetchJobStatus } from '../../utils/servicesApi';
+import { formatDateDisplay, calculateTimeElapsed } from '../../utils/dateUtils';
 
 /**
  * Component to display detailed information about a specific service job
  * @param {Object} props - Component props
  * @param {string} props.jobId - ID of the job to display
  * @param {Function} props.onClose - Function to call when closing the details view
- * @param {Function} props.onCreateNewJob - Function to call when "Create New Job" button is clicked
  */
-const ServiceDetails = ({ jobId, onClose, onCreateNewJob }) => {
+const ServiceDetails = ({ jobId, onClose }) => {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,43 +38,10 @@ const ServiceDetails = ({ jobId, onClose, onCreateNewJob }) => {
     return () => clearInterval(intervalId);
   }, [jobId]);
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp * 1000).toLocaleString();
-  };
-
   // Calculate job duration
   const getJobDuration = () => {
     if (!job) return 'N/A';
-    
-    const start = job.started_at ? new Date(job.started_at * 1000) : null;
-    const end = job.completed_at ? new Date(job.completed_at * 1000) : null;
-    
-    if (!start) return 'Not started yet';
-    if (!end) {
-      // If still running, calculate duration from start to now
-      const now = new Date();
-      const durationMs = now - start;
-      return formatDuration(durationMs);
-    }
-    
-    const durationMs = end - start;
-    return formatDuration(durationMs);
-  };
-  
-  // Format milliseconds to human-readable duration
-  const formatDuration = (ms) => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
-    }
+    return calculateTimeElapsed(job.started_at, job.completed_at);
   };
 
   if (loading && !job) {
@@ -82,22 +49,14 @@ const ServiceDetails = ({ jobId, onClose, onCreateNewJob }) => {
       <div className="bg-white rounded-lg shadow dark:bg-gray-800 p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Job Details</h2>
-          <div className="flex space-x-3">
-            <button 
-              onClick={onCreateNewJob}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Create New Job
-            </button>
-            <button 
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <div className="flex justify-center items-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -111,22 +70,14 @@ const ServiceDetails = ({ jobId, onClose, onCreateNewJob }) => {
       <div className="bg-white rounded-lg shadow dark:bg-gray-800 p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Job Details</h2>
-          <div className="flex space-x-3">
-            <button 
-              onClick={onCreateNewJob}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Create New Job
-            </button>
-            <button 
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
           <p className="font-bold">Error</p>
@@ -145,22 +96,14 @@ const ServiceDetails = ({ jobId, onClose, onCreateNewJob }) => {
             ID: {job.job_id} | Service: {job.service_type.charAt(0).toUpperCase() + job.service_type.slice(1)}
           </p>
         </div>
-        <div className="flex space-x-3">
-          <button 
-            onClick={onCreateNewJob}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            Create New Job
-          </button>
-          <button 
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+        <button 
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       {/* Status banner */}
@@ -282,19 +225,17 @@ const ServiceDetails = ({ jobId, onClose, onCreateNewJob }) => {
         {/* Overview tab */}
         {activeTab === 'overview' && (
           <div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Created</h3>
-                <p className="text-gray-900 dark:text-white">{formatDate(job.created_at)}</p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Started</h3>
-                <p className="text-gray-900 dark:text-white">{formatDate(job.started_at)}</p>
+                <p className="text-gray-900 dark:text-white">{formatDateDisplay(job.started_at)}</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Completed</h3>
-                <p className="text-gray-900 dark:text-white">{formatDate(job.completed_at)}</p>
-              </div>
+              {job.completed_at && (
+                <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Completed</h3>
+                  <p className="text-gray-900 dark:text-white">{formatDateDisplay(job.completed_at)}</p>
+                </div>
+              )}
             </div>
             
             {job.status === 'completed' && job.result_path && (

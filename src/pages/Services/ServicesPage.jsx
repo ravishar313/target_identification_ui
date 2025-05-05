@@ -97,7 +97,6 @@ const ServicesPage = () => {
         <ServiceDetails 
           jobId={selectedJobId} 
           onClose={handleCreateNewJob} 
-          onCreateNewJob={handleCreateNewJob}
         />
       );
     }
@@ -181,17 +180,15 @@ const ServicesPage = () => {
               </h2>
               
               <div>
-                <button
-                  onClick={handleCreateNewJob}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    showNewJobForm
-                      ? 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                  disabled={showNewJobForm}
-                >
-                  Create New Job
-                </button>
+                {/* Only show Create New Job button when viewing job details or jobs list, not when already on the form */}
+                {selectedJobId && (
+                  <button
+                    onClick={handleCreateNewJob}
+                    className="px-4 py-2 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Create New Job
+                  </button>
+                )}
               </div>
             </div>
           </div>
