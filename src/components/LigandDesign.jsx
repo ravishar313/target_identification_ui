@@ -195,7 +195,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
   // Start polling for status
   const startPolling = () => {
     if (!poolingInterval) {
-      const interval = setInterval(checkLeadDesignStatus, 10000); // Poll every 10 seconds
+      const interval = setInterval(checkLeadDesignStatus, 60000); // Poll every 60 seconds
       setPoolingInterval(interval);
     }
   };

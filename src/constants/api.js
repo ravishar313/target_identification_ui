@@ -24,4 +24,8 @@ export const endpoints = {
   // PyMol Chat endpoints
   pymolChatStatusUrl: `${BaseUrl}/pymol_chat/status`,
   pymolChatQueryUrl: `${BaseUrl}/pymol_chat/query`,
+  
+  // Services endpoints
+  servicesJobsUrl: `${BaseUrl}/services/jobs`,
+  servicesJobStatusUrl: (jobId) => `${BaseUrl}/services/jobs/${jobId}`,
 }; 

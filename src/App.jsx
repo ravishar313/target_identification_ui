@@ -7,6 +7,7 @@ import LeadIdentificationPage from './pages/LeadIdentification/LeadIdentificatio
 import LeadOptimizationPage from './pages/LeadOptimization/LeadOptimizationPage'
 import PCCEvaluationPage from './pages/PCCEvaluation/PCCEvaluationPage'
 import PyMolChatPage from './pages/PyMolChat/PyMolChatPage'
+import ServicesPage from './pages/Services/ServicesPage'
 
 function App() {
   const [activeModule, setActiveModule] = useState('target-identification');
@@ -31,6 +32,8 @@ function App() {
         return <PCCEvaluationPage key={moduleKey} activeModule={activeModule} />;
       case 'pymol-chat':
         return <PyMolChatPage key={moduleKey} activeModule={activeModule} />;
+      case 'services':
+        return <ServicesPage key={moduleKey} activeModule={activeModule} />;
       default:
         return <TargetIdentificationPage key={moduleKey} activeModule={activeModule} />;
     }

@@ -1,0 +1,413 @@
+import React, { useState, useEffect } from 'react';
+import { fetchJobStatus } from '../../utils/servicesApi';
+
+/**
+ * Component to display detailed information about a specific service job
+ * @param {Object} props - Component props
+ * @param {string} props.jobId - ID of the job to display
+ * @param {Function} props.onClose - Function to call when closing the details view
+ * @param {Function} props.onCreateNewJob - Function to call when "Create New Job" button is clicked
+ */
+const ServiceDetails = ({ jobId, onClose, onCreateNewJob }) => {
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    if (!jobId) return;
+
+    const loadJobData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const jobData = await fetchJobStatus(jobId);
+        setJob(jobData);
+      } catch (err) {
+        console.error(`Error loading job ${jobId}:`, err);
+        setError(`Failed to load job details for ${jobId}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadJobData();
+    // Set up polling for job updates every 30 seconds
+    const intervalId = setInterval(loadJobData, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [jobId]);
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    return new Date(timestamp * 1000).toLocaleString();
+  };
+
+  // Calculate job duration
+  const getJobDuration = () => {
+    if (!job) return 'N/A';
+    
+    const start = job.started_at ? new Date(job.started_at * 1000) : null;
+    const end = job.completed_at ? new Date(job.completed_at * 1000) : null;
+    
+    if (!start) return 'Not started yet';
+    if (!end) {
+      // If still running, calculate duration from start to now
+      const now = new Date();
+      const durationMs = now - start;
+      return formatDuration(durationMs);
+    }
+    
+    const durationMs = end - start;
+    return formatDuration(durationMs);
+  };
+  
+  // Format milliseconds to human-readable duration
+  const formatDuration = (ms) => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
+  if (loading && !job) {
+    return (
+      <div className="bg-white rounded-lg shadow dark:bg-gray-800 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Job Details</h2>
+          <div className="flex space-x-3">
+            <button 
+              onClick={onCreateNewJob}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Create New Job
+            </button>
+            <button 
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow dark:bg-gray-800 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Job Details</h2>
+          <div className="flex space-x-3">
+            <button 
+              onClick={onCreateNewJob}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Create New Job
+            </button>
+            <button 
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
+          <p className="font-bold">Error</p>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow dark:bg-gray-800 p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{job.job_name}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            ID: {job.job_id} | Service: {job.service_type.charAt(0).toUpperCase() + job.service_type.slice(1)}
+          </p>
+        </div>
+        <div className="flex space-x-3">
+          <button 
+            onClick={onCreateNewJob}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Create New Job
+          </button>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Status banner */}
+      <div className={`mb-6 p-4 rounded-lg ${
+        job.status === 'pending' ? 'bg-yellow-50 border border-yellow-200' : 
+        job.status === 'running' ? 'bg-blue-50 border border-blue-200' : 
+        job.status === 'completed' ? 'bg-green-50 border border-green-200' : 
+        'bg-red-50 border border-red-200'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <span className={`inline-flex items-center justify-center p-2 rounded-full mr-3 ${
+              job.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+              job.status === 'running' ? 'bg-blue-100 text-blue-800' : 
+              job.status === 'completed' ? 'bg-green-100 text-green-800' : 
+              'bg-red-100 text-red-800'
+            }`}>
+              {job.status === 'pending' && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+              )}
+              {job.status === 'running' && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                </svg>
+              )}
+              {job.status === 'completed' && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              )}
+              {job.status === 'failed' && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              )}
+            </span>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">
+                Status: {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {job.progress_message || `${job.progress || 0}% complete`}
+              </p>
+            </div>
+          </div>
+
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            <p>Duration: {getJobDuration()}</p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        {(job.status === 'running' || job.status === 'pending') && (
+          <div className="mt-3">
+            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+              <div 
+                className="bg-blue-600 h-2.5 rounded-full" 
+                style={{ width: `${job.progress || 0}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex -mb-px space-x-8">
+          <button
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'overview'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+            onClick={() => setActiveTab('overview')}
+          >
+            Overview
+          </button>
+          <button
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'parameters'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+            onClick={() => setActiveTab('parameters')}
+          >
+            Parameters
+          </button>
+          {job.status === 'completed' && job.result_data && (
+            <button
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'results'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+              onClick={() => setActiveTab('results')}
+            >
+              Results
+            </button>
+          )}
+          {job.error && (
+            <button
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'error'
+                  ? 'border-red-500 text-red-600 dark:text-red-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+              onClick={() => setActiveTab('error')}
+            >
+              Error
+            </button>
+          )}
+        </nav>
+      </div>
+
+      {/* Tab content */}
+      <div>
+        {/* Overview tab */}
+        {activeTab === 'overview' && (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Created</h3>
+                <p className="text-gray-900 dark:text-white">{formatDate(job.created_at)}</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Started</h3>
+                <p className="text-gray-900 dark:text-white">{formatDate(job.started_at)}</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Completed</h3>
+                <p className="text-gray-900 dark:text-white">{formatDate(job.completed_at)}</p>
+              </div>
+            </div>
+            
+            {job.status === 'completed' && job.result_path && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Result Files</h3>
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <p className="font-medium text-gray-900 dark:text-white mb-2">File Location:</p>
+                  <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                    <code className="text-sm font-mono text-gray-800 dark:text-gray-200">{job.result_path}</code>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Parameters tab */}
+        {activeTab === 'parameters' && (
+          <div>
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Input Parameters</h3>
+              {job.parameters && Object.keys(job.parameters).length > 0 ? (
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <dl className="grid grid-cols-1 gap-x-4 gap-y-3">
+                    {Object.entries(job.parameters).map(([key, value]) => (
+                      <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                          {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
+                          {typeof value === 'object' ? JSON.stringify(value) : value.toString()}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">No input parameters provided.</p>
+              )}
+            </div>
+            
+            {job.parameters_used && Object.keys(job.parameters_used).length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Default Parameters Used</h3>
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <dl className="grid grid-cols-1 gap-x-4 gap-y-3">
+                    {Object.entries(job.parameters_used).map(([key, value]) => (
+                      <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                          {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
+                          {Array.isArray(value) 
+                            ? value.join(', ')
+                            : typeof value === 'object' 
+                              ? JSON.stringify(value) 
+                              : value.toString()}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Results tab */}
+        {activeTab === 'results' && job.result_data && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Job Results</h3>
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+              {typeof job.result_data === 'object' ? (
+                <dl className="grid grid-cols-1 gap-x-4 gap-y-3">
+                  {Object.entries(job.result_data).map(([key, value]) => (
+                    <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
+                      </dt>
+                      <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
+                        {typeof value === 'object' 
+                          ? JSON.stringify(value, null, 2)
+                          : value.toString()}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="text-gray-900 dark:text-white">{job.result_data.toString()}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Error tab */}
+        {activeTab === 'error' && job.error && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Error Details</h3>
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+              <p className="text-red-700 dark:text-red-400 whitespace-pre-wrap">{job.error}</p>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Loading indicator when polling for updates */}
+      {loading && job && (
+        <div className="flex justify-center mt-6">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ServiceDetails; 
