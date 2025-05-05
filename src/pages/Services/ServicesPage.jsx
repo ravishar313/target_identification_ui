@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ServiceSelector from '../../components/services/ServiceSelector';
 import ServiceJobsList from '../../components/services/ServiceJobsList';
 import AlphafoldService from '../../components/services/AlphafoldService';
+import MolmimService from '../../components/services/MolmimService';
 import ServiceDetails from '../../components/services/ServiceDetails';
 import { fetchAvailableServices, fetchJobStatus } from '../../utils/servicesApi';
 
@@ -79,6 +80,8 @@ const ServicesPage = () => {
     switch (selectedService) {
       case 'alphafold':
         return <AlphafoldService onJobSubmitted={handleViewJob} />;
+      case 'molmim':
+        return <MolmimService onJobSubmitted={handleViewJob} />;
       default:
         return (
           <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchJobStatus } from '../../utils/servicesApi';
+import { fetchJobStatus, deleteJob, FILE_BASE_PATH, downloadFile } from '../../utils/servicesApi';
 import { formatDateDisplay, calculateTimeElapsed } from '../../utils/dateUtils';
 
 /**
@@ -13,6 +13,8 @@ const ServiceDetails = ({ jobId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!jobId) return;
@@ -42,6 +44,55 @@ const ServiceDetails = ({ jobId, onClose }) => {
   const getJobDuration = () => {
     if (!job) return 'N/A';
     return calculateTimeElapsed(job.started_at, job.completed_at);
+  };
+
+  // Handle job deletion
+  const handleDeleteJob = async () => {
+    if (!confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      const response = await deleteJob(jobId);
+      alert(response.message || 'Job deleted successfully');
+      onClose(); // Close the details view after successful deletion
+    } catch (err) {
+      console.error(`Error deleting job ${jobId}:`, err);
+      alert(`Failed to delete job: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle file download
+  const handleDownload = async (filePath, fileName) => {
+    try {
+      setDownloading(true);
+      
+      // Get the proper file name from the path if not provided
+      const defaultFileName = fileName || filePath.split('/').pop() || 'download';
+      
+      // Download the file as a blob
+      const fileBlob = await downloadFile(filePath);
+      
+      // Create a download link and trigger it
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', defaultFileName);
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(`Error downloading file:`, err);
+      alert(`Failed to download file: ${err.message}`);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (loading && !job) {
@@ -96,14 +147,26 @@ const ServiceDetails = ({ jobId, onClose }) => {
             ID: {job.job_id} | Service: {job.service_type.charAt(0).toUpperCase() + job.service_type.slice(1)}
           </p>
         </div>
-        <button 
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={handleDeleteJob}
+            disabled={isDeleting}
+            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+            title="Delete job"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Status banner */}
@@ -242,10 +305,26 @@ const ServiceDetails = ({ jobId, onClose }) => {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Result Files</h3>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <p className="font-medium text-gray-900 dark:text-white mb-2">File Location:</p>
-                  <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                    <code className="text-sm font-mono text-gray-800 dark:text-gray-200">{job.result_path}</code>
-                  </div>
+                  <p className="font-medium text-gray-900 dark:text-white mb-2">Download Result:</p>
+                  <button 
+                    onClick={() => handleDownload(job.result_path)}
+                    disabled={downloading}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    {downloading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                        Download File
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             )}
@@ -316,9 +395,31 @@ const ServiceDetails = ({ jobId, onClose }) => {
                         {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
                       </dt>
                       <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
-                        {typeof value === 'object' 
-                          ? JSON.stringify(value, null, 2)
-                          : value.toString()}
+                        {typeof value === 'string' && (value.endsWith('.pdb') || value.endsWith('.cif') || value.endsWith('.txt') || value.endsWith('.json')) ? (
+                          <button 
+                            onClick={() => handleDownload(value, value.split('/').pop())}
+                            disabled={downloading}
+                            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                          >
+                            {downloading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                                Download {value.split('/').pop()}
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          (typeof value === 'object' 
+                            ? JSON.stringify(value, null, 2)
+                            : value.toString())
+                        )}
                       </dd>
                     </div>
                   ))}
@@ -345,6 +446,18 @@ const ServiceDetails = ({ jobId, onClose }) => {
       {loading && job && (
         <div className="flex justify-center mt-6">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+        </div>
+      )}
+      
+      {/* Delete confirmation feedback */}
+      {isDeleting && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+            <p className="text-gray-900 dark:text-white mb-4">Deleting job...</p>
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,8 @@
 import { endpoints } from '../constants/api';
 
+// Base path for file downloads
+export const FILE_BASE_PATH = '/Users/ravi/Upsurge/target_identification/';
+
 /**
  * Fetches available services
  * @returns {Promise<Array>} List of available services
@@ -14,6 +17,12 @@ export const fetchAvailableServices = async () => {
         name: 'AlphaFold',
         icon: '🧬',
         description: 'Predict 3D protein structures using AlphaFold'
+      },
+      {
+        id: 'molmim',
+        name: 'MolMIM',
+        icon: '⚗️',
+        description: 'Generate optimized molecular structures using MolMIM'
       },
       // Additional services can be added here as they become available
     ];
@@ -93,6 +102,52 @@ export const fetchServiceJobs = async (serviceType) => {
     return await response.json();
   } catch (error) {
     console.error(`Error fetching jobs for ${serviceType || 'all services'}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Deletes a specific job
+ * @param {string} jobId - ID of the job to delete
+ * @returns {Promise<Object>} Response with status and message
+ */
+export const deleteJob = async (jobId) => {
+  try {
+    const response = await fetch(endpoints.servicesJobStatusUrl(jobId), {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to delete job ${jobId}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error deleting job ${jobId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Download a file from the server
+ * @param {string} relativePath - Relative path to the file
+ * @returns {Promise<Blob>} Blob containing the file data
+ */
+export const downloadFile = async (relativePath) => {
+  try {
+    const downloadUrl = endpoints.fileDownloadUrl(relativePath);
+    
+    const response = await fetch(downloadUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to download file: ${response.statusText}`);
+    }
+    
+    // Return the file as a blob
+    return await response.blob();
+  } catch (error) {
+    console.error(`Error downloading file ${relativePath}:`, error);
     throw error;
   }
 }; 

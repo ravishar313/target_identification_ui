@@ -28,4 +28,7 @@ export const endpoints = {
   // Services endpoints
   servicesJobsUrl: `${BaseUrl}/services/jobs`,
   servicesJobStatusUrl: (jobId) => `${BaseUrl}/services/jobs/${jobId}`,
+  
+  // File download endpoint
+  fileDownloadUrl: (filePath) => `${BaseUrl}/download/${encodeURIComponent(filePath)}`,
 }; 
