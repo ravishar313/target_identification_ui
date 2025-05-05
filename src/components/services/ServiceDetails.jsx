@@ -34,8 +34,8 @@ const ServiceDetails = ({ jobId, onClose }) => {
     };
 
     loadJobData();
-    // Set up polling for job updates every 30 seconds
-    const intervalId = setInterval(loadJobData, 30000);
+    // Set up polling for job updates every 2 minutes
+    const intervalId = setInterval(loadJobData, 120000);
     
     return () => clearInterval(intervalId);
   }, [jobId]);
