@@ -15,6 +15,8 @@ const LigandDesign = ({ data, onNext, onBack }) => {
   const [selectedMoleculeProps, setSelectedMoleculeProps] = useState(null);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [propertiesError, setPropertiesError] = useState(null);
+  const [leadsProperties, setLeadsProperties] = useState({});
+  const [loadingLeadsProperties, setLoadingLeadsProperties] = useState(false);
 
   // Function to submit lead design job
   const submitLeadDesignJob = async () => {
@@ -45,6 +47,9 @@ const LigandDesign = ({ data, onNext, onBack }) => {
       // If status is not completed, start polling
       if (responseData.status !== 'completed') {
         startPolling();
+      } else {
+        // Fetch properties for all leads if the job is already completed
+        fetchAllLeadProperties(responseData.leads);
       }
     } catch (error) {
       console.error('Error submitting lead design job:', error);
@@ -68,8 +73,11 @@ const LigandDesign = ({ data, onNext, onBack }) => {
       const responseData = await response.json();
       setLeadData(responseData);
       
-      // If status is completed, stop polling
-      if (responseData.status === 'completed' || responseData.error) {
+      // If status is completed, stop polling and fetch properties
+      if (responseData.status === 'completed') {
+        stopPolling();
+        fetchAllLeadProperties(responseData.leads);
+      } else if (responseData.error) {
         stopPolling();
       }
     } catch (error) {
@@ -81,11 +89,48 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     }
   };
 
-  // Function to fetch molecule properties
-  const fetchMoleculeProperties = async (smiles) => {
-    setLoadingProperties(true);
-    setPropertiesError(null);
+  // Function to fetch properties for all leads
+  const fetchAllLeadProperties = async (leads) => {
+    if (!leads || leads.length === 0 || loadingLeadsProperties) return;
     
+    setLoadingLeadsProperties(true);
+    
+    // Create a copy of the current properties
+    const newLeadsProperties = { ...leadsProperties };
+    
+    // Process leads in batches to avoid overwhelming the server
+    const batchSize = 5;
+    for (let i = 0; i < leads.length; i += batchSize) {
+      const batch = leads.slice(i, i + batchSize);
+      
+      // Filter out leads that already have properties
+      const leadsToFetch = batch.filter(smiles => !newLeadsProperties[smiles]);
+      
+      if (leadsToFetch.length === 0) continue;
+      
+      // Fetch properties for each lead in the batch
+      await Promise.all(
+        leadsToFetch.map(async (smiles) => {
+          try {
+            const properties = await fetchMoleculePropertiesData(smiles);
+            newLeadsProperties[smiles] = properties;
+          } catch (error) {
+            console.error(`Error fetching properties for ${smiles}:`, error);
+            // Set null to indicate failed fetch
+            newLeadsProperties[smiles] = null;
+          }
+        })
+      );
+      
+      // Update state after each batch to show progress
+      setLeadsProperties({ ...newLeadsProperties });
+    }
+    
+    setLoadingLeadsProperties(false);
+  };
+
+  // Function to fetch molecule properties and return data
+  const fetchMoleculePropertiesData = async (smiles) => {
     try {
       const response = await fetch(endpoints.getMoleculePropertiesUrl, {
         method: 'POST',
@@ -99,8 +144,32 @@ const LigandDesign = ({ data, onNext, onBack }) => {
         throw new Error(`Failed to fetch molecule properties. Status: ${response.status}`);
       }
 
-      const responseData = await response.json();
+      return await response.json();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Function to fetch molecule properties and update state
+  const fetchMoleculeProperties = async (smiles) => {
+    // If we already have properties for this molecule, use them
+    if (leadsProperties[smiles]) {
+      setSelectedMoleculeProps(leadsProperties[smiles]);
+      return;
+    }
+    
+    setLoadingProperties(true);
+    setPropertiesError(null);
+    
+    try {
+      const responseData = await fetchMoleculePropertiesData(smiles);
       setSelectedMoleculeProps(responseData);
+      
+      // Update the leads properties cache
+      setLeadsProperties(prev => ({
+        ...prev,
+        [smiles]: responseData
+      }));
     } catch (error) {
       console.error('Error fetching molecule properties:', error);
       setPropertiesError(error.message || 'Failed to fetch molecule properties');
@@ -391,6 +460,128 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     );
   };
 
+  // Render a single lead card with image and properties
+  const renderLeadCard = (smiles, index) => {
+    const properties = leadsProperties[smiles];
+    const isLoading = loadingLeadsProperties && !properties;
+    
+    return (
+      <div 
+        key={index}
+        onClick={() => handleMoleculeSelect(smiles)}
+        className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all cursor-pointer transform hover:-translate-y-1 flex flex-col h-full"
+      >
+        {/* Molecule Image */}
+        <div className="flex justify-center bg-gray-50 dark:bg-gray-800 rounded-md p-2 mb-3 h-32 items-center">
+          {isLoading ? (
+            <svg className="animate-spin h-8 w-8 text-gray-300 dark:text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : properties ? (
+            <img 
+              src={properties.properties['Molecule Image (base64)']} 
+              alt="Molecular Structure" 
+              className="max-w-full max-h-full object-contain"
+            />
+          ) : (
+            <div className="text-sm text-gray-400 dark:text-gray-500 text-center">
+              Image not available
+            </div>
+          )}
+        </div>
+        
+        {/* Top section - ID and basic info */}
+        <div className="flex justify-between items-start mb-2">
+          <div className="text-xs font-medium bg-pharma-blue/10 dark:bg-pharma-teal/10 text-pharma-blue dark:text-pharma-teal px-2 py-1 rounded-md">
+            Lead #{index + 1}
+          </div>
+          <button 
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(smiles);
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </button>
+        </div>
+        
+        {/* SMILES string */}
+        <div className="text-xs font-mono text-gray-600 dark:text-gray-300 mb-3 truncate" title={smiles}>
+          {formatSmiles(smiles)}
+        </div>
+        
+        {/* Properties display */}
+        {properties ? (
+          <div className="space-y-2 mt-auto">
+            <div className="grid grid-cols-2 gap-1">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Formula</div>
+              <div className="text-xs text-gray-800 dark:text-gray-200">
+                {properties.properties['Molecular Formula']}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">MW</div>
+              <div className="text-xs text-gray-800 dark:text-gray-200">
+                {formatPropertyValue('Molecular Weight', properties.properties['Molecular Weight'])}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">LogP</div>
+              <div className="text-xs text-gray-800 dark:text-gray-200">
+                {formatPropertyValue('LogP', properties.properties['LogP'])}
+              </div>
+            </div>
+            
+            {/* QED Score Bar */}
+            <div className="mt-2">
+              <div className="flex justify-between items-center mb-1">
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  QED Score
+                </div>
+                <div className="text-xs text-gray-800 dark:text-gray-200">
+                  {formatPropertyValue('QED', properties.properties['QED'])}
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                <div 
+                  className="bg-pharma-blue dark:bg-pharma-teal h-1.5 rounded-full" 
+                  style={{ width: `${properties.properties['QED'] * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            {/* View Details button */}
+            <div className="flex justify-center mt-3">
+              <span className="text-xs text-pharma-blue dark:text-pharma-teal hover:underline inline-flex items-center">
+                View Details
+                <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </span>
+            </div>
+          </div>
+        ) : !isLoading ? (
+          <div className="flex items-center justify-center py-2 mt-auto">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Properties not available
+            </span>
+          </div>
+        ) : (
+          <div className="space-y-2 mt-auto animate-pulse">
+            <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded"></div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full">
       <div className="space-y-6">
@@ -514,35 +705,20 @@ const LigandDesign = ({ data, onNext, onBack }) => {
             
             {/* Lead compounds list */}
             {leadData.leads && leadData.leads.length > 0 ? (
-              <div className="mt-4 max-h-[400px] overflow-y-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {leadData.leads.map((smiles, index) => (
-                    <div 
-                      key={index}
-                      className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow"
-                    >
-                      <p className="text-xs font-mono text-gray-800 dark:text-gray-200 mb-2 truncate" title={smiles}>
-                        {formatSmiles(smiles)}
-                      </p>
-                      <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                        <span>Lead #{index + 1}</span>
-                        <div className="flex space-x-2">
-                          <button 
-                            className="text-pharma-blue dark:text-pharma-teal hover:underline"
-                            onClick={() => navigator.clipboard.writeText(smiles)}
-                          >
-                            Copy
-                          </button>
-                          <button 
-                            className="text-pharma-blue dark:text-pharma-teal hover:underline font-medium"
-                            onClick={() => handleMoleculeSelect(smiles)}
-                          >
-                            View Details
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              <div className="mt-4 max-h-[600px] overflow-y-auto p-1">
+                {/* Loading indicator for properties */}
+                {loadingLeadsProperties && Object.keys(leadsProperties).length === 0 && (
+                  <div className="flex justify-center items-center py-4">
+                    <svg className="animate-spin mr-2 h-5 w-5 text-pharma-blue dark:text-pharma-teal" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Loading lead properties...</span>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {leadData.leads.map((smiles, index) => renderLeadCard(smiles, index))}
                 </div>
               </div>
             ) : (
