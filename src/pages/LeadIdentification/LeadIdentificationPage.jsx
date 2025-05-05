@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ProjectPDBSelection from '../../components/ProjectPDBSelection';
 import CharacteristicsDisplay from '../../components/CharacteristicsDisplay';
 import ReviewLeadCharacteristics from '../../components/ReviewLeadCharacteristics';
+import LigandDesign from '../../components/LigandDesign';
 import { endpoints } from '../../constants/api';
 
 const LeadIdentificationPage = () => {
@@ -45,6 +46,12 @@ const LeadIdentificationPage = () => {
       icon: '📋', 
       component: ReviewLeadCharacteristics,
       description: 'Review all lead characteristics for drug design'
+    },
+    { 
+      title: 'Ligand Design', 
+      icon: '💊', 
+      component: LigandDesign,
+      description: 'Design lead compounds based on identified characteristics'
     }
   ];
 

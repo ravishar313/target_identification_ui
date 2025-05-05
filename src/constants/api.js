@@ -16,6 +16,10 @@ export const endpoints = {
   targetCharacteristicsUrl: `${BaseUrl}/lead_identification/target_characteristics`,
   pocketCharacteristicsUrl: `${BaseUrl}/lead_identification/pocket_characteristics`,
   
+  // New Lead Design endpoints
+  designLeadsUrl: `${BaseUrl}/lead_identification/design_leads`,
+  leadStatusUrl: `${BaseUrl}/lead_identification/lead_status`,
+  
   // PyMol Chat endpoints
   pymolChatStatusUrl: `${BaseUrl}/pymol_chat/status`,
   pymolChatQueryUrl: `${BaseUrl}/pymol_chat/query`,
