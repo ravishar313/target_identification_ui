@@ -19,6 +19,7 @@ export const endpoints = {
   // New Lead Design endpoints
   designLeadsUrl: `${BaseUrl}/lead_identification/design_leads`,
   leadStatusUrl: `${BaseUrl}/lead_identification/lead_status`,
+  getMoleculePropertiesUrl: `${BaseUrl}/lead_identification/get_properties`,
   
   // PyMol Chat endpoints
   pymolChatStatusUrl: `${BaseUrl}/pymol_chat/status`,
