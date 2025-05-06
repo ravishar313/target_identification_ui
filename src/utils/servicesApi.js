@@ -35,6 +35,12 @@ export const fetchAvailableServices = async () => {
         name: 'ADMET',
         icon: '💊',
         description: 'Predict pharmacokinetic properties for small molecules'
+      },
+      {
+        id: 'clintox',
+        name: 'ClinTox',
+        icon: '🧪',
+        description: 'Predict clinical toxicity and FDA approval likelihood'
       }
       // Additional services can be added here as they become available
     ];

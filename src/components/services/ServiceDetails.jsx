@@ -454,6 +454,95 @@ const ServiceDetails = ({ jobId, onClose }) => {
               </div>
             )}
             
+            {/* Special rendering for ClinTox results */}
+            {job.service_type === 'clintox' && job.result_data.tox_result && (
+              <div className="mb-6">
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-3">Clinical Toxicity Assessment</h4>
+                  <div className="space-y-6">
+                    {/* Toxicity Score */}
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Toxicity Score (FDA approval likelihood)
+                        </span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {(job.result_data.tox_result.tox_score * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-600">
+                        <div 
+                          className={`h-2.5 rounded-full ${
+                            job.result_data.tox_result.tox_score >= 0.75 ? 'bg-red-500' : 
+                            job.result_data.tox_result.tox_score >= 0.5 ? 'bg-yellow-500' : 
+                            'bg-green-500'
+                          }`} 
+                          style={{ width: `${job.result_data.tox_result.tox_score * 100}%` }}
+                        ></div>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {job.result_data.tox_result.tox_score >= 0.75 ? 'High risk of toxicity, low FDA approval likelihood' : 
+                        job.result_data.tox_result.tox_score >= 0.5 ? 'Moderate risk of toxicity' : 
+                        'Low risk of toxicity, higher FDA approval likelihood'}
+                      </p>
+                    </div>
+                    
+                    {/* Synthetic Accessibility Score */}
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Synthetic Accessibility Score
+                        </span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {job.result_data.tox_result.SA_score.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-600">
+                        <div 
+                          className={`h-2.5 rounded-full ${
+                            job.result_data.tox_result.SA_score >= 0.75 ? 'bg-red-500' : 
+                            job.result_data.tox_result.SA_score >= 0.5 ? 'bg-yellow-500' : 
+                            'bg-green-500'
+                          }`} 
+                          style={{ width: `${Math.min(job.result_data.tox_result.SA_score * 100, 100)}%` }}
+                        ></div>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {job.result_data.tox_result.SA_score >= 0.75 ? 'Difficult to synthesize' : 
+                        job.result_data.tox_result.SA_score >= 0.5 ? 'Moderately difficult to synthesize' : 
+                        'Easy to synthesize'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 border-t pt-3 border-gray-200 dark:border-gray-600">
+                    <div className="flex space-x-4">
+                      <button 
+                        onClick={() => handleDownload(job.result_data.csv_file, 'clintox_results.csv')}
+                        disabled={downloading}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                        CSV File
+                      </button>
+                      <button 
+                        onClick={() => handleDownload(job.result_data.json_file, 'clintox_results.json')}
+                        disabled={downloading}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                        JSON File
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Generic result display for other services */}
             <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
               {typeof job.result_data === 'object' ? (
@@ -461,6 +550,11 @@ const ServiceDetails = ({ jobId, onClose }) => {
                   {Object.entries(job.result_data).map(([key, value]) => {
                     // Skip admet_result as we're displaying it specially above
                     if (job.service_type === 'admet' && (key === 'admet_result' || key === 'csv_file' || key === 'json_file')) {
+                      return null;
+                    }
+                    
+                    // Skip clintox_result as we're displaying it specially above
+                    if (job.service_type === 'clintox' && (key === 'tox_result' || key === 'csv_file' || key === 'json_file')) {
                       return null;
                     }
                     
