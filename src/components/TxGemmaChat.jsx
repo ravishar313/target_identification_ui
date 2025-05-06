@@ -1,29 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { endpoints } from '../constants/api';
 
-const quirkyLoadingMessages = [
-  "Consulting biology textbooks...",
-  "Sequencing proteins...",
-  "Analyzing medical literature...",
-  "Investigating cellular mechanisms...",
-  "Exploring metabolic pathways...",
-  "Decoding genetic sequences...",
-  "Studying biochemical reactions...",
-  "Examining clinical data...",
-  "Modeling molecular interactions...",
-  "Running virtual experiments..."
-];
-
 const TxGemmaChat = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [inputMessage, setInputMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
+  const [formattedHistory, setFormattedHistory] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
+  const [loadingMessage, setLoadingMessage] = useState('Processing your query...');
   const [streamingContent, setStreamingContent] = useState('');
   const [currentEvent, setCurrentEvent] = useState(null);
   const [eventHistory, setEventHistory] = useState([]);
+  const [expandedMessages, setExpandedMessages] = useState({});
   const chatContainerRef = useRef(null);
   const mountedRef = useRef(false);
   const abortControllerRef = useRef(null);
@@ -34,6 +23,8 @@ const TxGemmaChat = () => {
     if (mountedRef.current) {
       setChatHistory([]);
       setEventHistory([]);
+      setExpandedMessages({});
+      setFormattedHistory('');
     } else {
       mountedRef.current = true;
     }
@@ -53,6 +44,33 @@ const TxGemmaChat = () => {
     }
   }, [chatHistory, streamingContent, eventHistory]);
 
+  // Update formatted history whenever chat history changes
+  useEffect(() => {
+    // Skip if chat history is empty
+    if (chatHistory.length === 0) {
+      setFormattedHistory('');
+      return;
+    }
+
+    // Format the chat history as a string
+    let historyString = '';
+    
+    chatHistory.forEach((message) => {
+      const role = message.role === 'user' ? 'Human' : 'Assistant';
+      historyString += `${role}: ${message.content}\n\n`;
+    });
+    
+    setFormattedHistory(historyString);
+  }, [chatHistory]);
+
+  // Toggle the expanded state of a message
+  const toggleMessageExpanded = (messageIndex) => {
+    setExpandedMessages(prev => ({
+      ...prev,
+      [messageIndex]: !prev[messageIndex]
+    }));
+  };
+
   // Handle key press in textarea
   const handleKeyPress = (e) => {
     // Add new line with Shift+Enter
@@ -65,14 +83,6 @@ const TxGemmaChat = () => {
       e.preventDefault();
       sendMessage();
     }
-  };
-
-  // Format the chat history into a properly structured query
-  const formatChatHistory = () => {
-    return chatHistory.map(message => ({
-      role: message.role,
-      content: message.content
-    }));
   };
 
   // Cancel the current streaming request
@@ -104,16 +114,18 @@ const TxGemmaChat = () => {
     setCurrentEvent(null);
     setEventHistory([]);
     
-    // Set a random quirky loading message
-    setLoadingMessage(quirkyLoadingMessages[Math.floor(Math.random() * quirkyLoadingMessages.length)]);
+    // Set standard loading message
+    setLoadingMessage('Processing your query...');
     
     try {
       // Create new AbortController for this request
       abortControllerRef.current = new AbortController();
       const signal = abortControllerRef.current.signal;
 
-      // Prepare the query with chat history
-      const query = inputMessage;
+      // Create a query that includes the chat history and current query
+      const queryWithHistory = formattedHistory ? 
+        `${formattedHistory}Human: ${userMessage.content}` : 
+        userMessage.content;
       
       // Send query to TxGemma streaming endpoint
       const response = await fetch(`${endpoints.txGemmaQueryStreamUrl}`, {
@@ -121,7 +133,7 @@ const TxGemmaChat = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query: queryWithHistory }),
         signal,
       });
       
@@ -370,6 +382,8 @@ const TxGemmaChat = () => {
   // Render a chat message
   const renderChatMessage = (message, index) => {
     const isUser = message.role === 'user';
+    const isExpanded = expandedMessages[index] || false;
+    const hasEvents = !isUser && message.events && message.events.length > 0;
     
     return (
       <div 
@@ -407,14 +421,39 @@ const TxGemmaChat = () => {
                   : 'bg-gray-700 text-white rounded-tl-none'
             }`}
           >
-            {/* For system messages with events, show the steps first then the answer */}
-            {!isUser && message.events && message.events.length > 0 ? (
+            {/* For system messages with events, show the content first with option to expand steps */}
+            {!isUser && hasEvents ? (
               <>
-                {renderEventSteps(message.events)}
-                <div className="mt-3 border-t border-gray-600 pt-3 text-white">
-                  <h4 className="text-gray-300 font-medium mb-2">Final Answer:</h4>
-                  <p className="whitespace-pre-wrap">{message.content}</p>
-                </div>
+                <div className="whitespace-pre-wrap">{message.content}</div>
+                
+                {/* Details toggle button */}
+                {message.events.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-600">
+                    <button
+                      onClick={() => toggleMessageExpanded(index)}
+                      className="flex items-center text-sm text-purple-300 hover:text-purple-200 transition-colors"
+                    >
+                      {isExpanded ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                          </svg>
+                          Hide processing details
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                          View processing details
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+                
+                {/* Render steps only if expanded */}
+                {isExpanded && renderEventSteps(message.events)}
               </>
             ) : (
               <p className="whitespace-pre-wrap">{message.content}</p>
@@ -536,7 +575,19 @@ const TxGemmaChat = () => {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Welcome to TxGemma Chat</h3>
-              <p className="text-gray-300 mb-6">Ask biology-related questions or run clinical predictions</p>
+              <p className="text-gray-300 mb-4">Ask biology-related questions or run clinical predictions</p>
+              
+              <a 
+                href="https://arxiv.org/pdf/2504.06196" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center justify-center text-sm text-purple-300 hover:text-purple-200 mb-6 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Read more about TxGemma - capabilities and evals
+              </a>
               
               <div className="space-y-3">
                 <button 
