@@ -29,6 +29,12 @@ export const fetchAvailableServices = async () => {
         name: 'DiffDock',
         icon: '🔍',
         description: 'Perform protein-ligand docking using DiffDock'
+      },
+      {
+        id: 'admet',
+        name: 'ADMET',
+        icon: '💊',
+        description: 'Predict pharmacokinetic properties for small molecules'
       }
       // Additional services can be added here as they become available
     ];

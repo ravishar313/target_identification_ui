@@ -386,43 +386,119 @@ const ServiceDetails = ({ jobId, onClose }) => {
         {activeTab === 'results' && job.result_data && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Job Results</h3>
+            
+            {/* Special rendering for ADMET results */}
+            {job.service_type === 'admet' && job.result_data.admet_result && (
+              <div className="mb-6">
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-3">ADMET Properties</h4>
+                  <div className="space-y-4">
+                    {Object.entries(job.result_data.admet_result).map(([property, value]) => {
+                      // Convert property names to readable format
+                      const propertyName = property === 'BBB_safe' ? 'BBB Safety' :
+                                         property === 'herg_safe' ? 'hERG Safety' :
+                                         property === 'bioavailability' ? 'Bioavailability' :
+                                         property === 'solubility' ? 'Solubility' : 
+                                         property === 'tox' ? 'Toxicity' : 
+                                         property.charAt(0).toUpperCase() + property.slice(1).replace(/_/g, ' ');
+                      
+                      // Determine color based on value ranges
+                      let colorClass = '';
+                      if (value >= 75) {
+                        colorClass = 'bg-green-500';
+                      } else if (value >= 50) {
+                        colorClass = 'bg-yellow-500';
+                      } else {
+                        colorClass = 'bg-red-500';
+                      }
+                      
+                      return (
+                        <div key={property} className="mb-2">
+                          <div className="flex justify-between mb-1">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{propertyName}</span>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{value.toFixed(2)}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-600">
+                            <div className={`h-2.5 rounded-full ${colorClass}`} style={{ width: `${value}%` }}></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="mt-4 border-t pt-3 border-gray-200 dark:border-gray-600">
+                    <div className="flex space-x-4">
+                      <button 
+                        onClick={() => handleDownload(job.result_data.csv_file, 'admet_results.csv')}
+                        disabled={downloading}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                        CSV File
+                      </button>
+                      <button 
+                        onClick={() => handleDownload(job.result_data.json_file, 'admet_results.json')}
+                        disabled={downloading}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                        JSON File
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Generic result display for other services */}
             <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
               {typeof job.result_data === 'object' ? (
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3">
-                  {Object.entries(job.result_data).map(([key, value]) => (
-                    <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
-                        {typeof value === 'string' && (value.endsWith('.pdb') || value.endsWith('.cif') || value.endsWith('.txt') || value.endsWith('.json')) ? (
-                          <button 
-                            onClick={() => handleDownload(value, value.split('/').pop())}
-                            disabled={downloading}
-                            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                          >
-                            {downloading ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                Downloading...
-                              </>
-                            ) : (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                                Download {value.split('/').pop()}
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          (typeof value === 'object' 
-                            ? JSON.stringify(value, null, 2)
-                            : value.toString())
-                        )}
-                      </dd>
-                    </div>
-                  ))}
+                  {Object.entries(job.result_data).map(([key, value]) => {
+                    // Skip admet_result as we're displaying it specially above
+                    if (job.service_type === 'admet' && (key === 'admet_result' || key === 'csv_file' || key === 'json_file')) {
+                      return null;
+                    }
+                    
+                    return (
+                      <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                          {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
+                          {typeof value === 'string' && (value.endsWith('.pdb') || value.endsWith('.cif') || value.endsWith('.txt') || value.endsWith('.json')) ? (
+                            <button 
+                              onClick={() => handleDownload(value, value.split('/').pop())}
+                              disabled={downloading}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                            >
+                              {downloading ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Downloading...
+                                </>
+                              ) : (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                  </svg>
+                                  Download {value.split('/').pop()}
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            (typeof value === 'object' 
+                              ? JSON.stringify(value, null, 2)
+                              : value.toString())
+                          )}
+                        </dd>
+                      </div>
+                    );
+                  })}
                 </dl>
               ) : (
                 <p className="text-gray-900 dark:text-white">{job.result_data.toString()}</p>
