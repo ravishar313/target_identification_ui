@@ -25,6 +25,9 @@ export const endpoints = {
   pymolChatStatusUrl: `${BaseUrl}/pymol_chat/status`,
   pymolChatQueryUrl: `${BaseUrl}/pymol_chat/query`,
   
+  // TxGemma Chat endpoints
+  txGemmaQueryStreamUrl: `${BaseUrl}/txgemma/query/stream`,
+  
   // Services endpoints
   servicesJobsUrl: `${BaseUrl}/services/jobs`,
   servicesJobStatusUrl: (jobId) => `${BaseUrl}/services/jobs/${jobId}`,
