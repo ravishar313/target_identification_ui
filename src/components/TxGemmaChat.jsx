@@ -23,6 +23,7 @@ const TxGemmaChat = () => {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [streamingContent, setStreamingContent] = useState('');
   const [currentEvent, setCurrentEvent] = useState(null);
+  const [eventHistory, setEventHistory] = useState([]);
   const chatContainerRef = useRef(null);
   const mountedRef = useRef(false);
   const abortControllerRef = useRef(null);
@@ -32,6 +33,7 @@ const TxGemmaChat = () => {
     // Only clear if this isn't the first mount
     if (mountedRef.current) {
       setChatHistory([]);
+      setEventHistory([]);
     } else {
       mountedRef.current = true;
     }
@@ -49,7 +51,7 @@ const TxGemmaChat = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chatHistory, streamingContent]);
+  }, [chatHistory, streamingContent, eventHistory]);
 
   // Handle key press in textarea
   const handleKeyPress = (e) => {
@@ -100,6 +102,7 @@ const TxGemmaChat = () => {
     setIsProcessing(true);
     setStreamingContent('');
     setCurrentEvent(null);
+    setEventHistory([]);
     
     // Set a random quirky loading message
     setLoadingMessage(quirkyLoadingMessages[Math.floor(Math.random() * quirkyLoadingMessages.length)]);
@@ -130,6 +133,7 @@ const TxGemmaChat = () => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let finalAnswer = '';
+      let completeEventHistory = [];
       
       while (true) {
         const { value, done } = await reader.read();
@@ -142,6 +146,10 @@ const TxGemmaChat = () => {
           try {
             const event = JSON.parse(line);
             setCurrentEvent(event);
+            
+            // Add event to local variable and state
+            completeEventHistory = [...completeEventHistory, event];
+            setEventHistory(completeEventHistory);
             
             if (event.type === 'final_answer' && event.data && event.data.answer) {
               finalAnswer = event.data.answer;
@@ -157,13 +165,14 @@ const TxGemmaChat = () => {
         }
       }
       
-      // Add system response to chat history
+      // Add system response to chat history with the events included
       if (finalAnswer) {
         setChatHistory(prev => [
           ...prev,
           {
             role: 'system',
             content: finalAnswer,
+            events: completeEventHistory
           },
         ]);
       } else {
@@ -174,6 +183,7 @@ const TxGemmaChat = () => {
             role: 'system',
             content: 'Error: No response received from TxGemma.',
             error: true,
+            events: completeEventHistory
           },
         ]);
       }
@@ -191,6 +201,7 @@ const TxGemmaChat = () => {
           role: 'system',
           content: 'Error: ' + (err.message || 'Unknown error'),
           error: true,
+          events: [...eventHistory]
         },
       ]);
       setError('Failed to send message: ' + err.message);
@@ -201,6 +212,159 @@ const TxGemmaChat = () => {
       setCurrentEvent(null);
       abortControllerRef.current = null;
     }
+  };
+
+  // Renders the event step UI (showing all reasoning steps)
+  const renderEventSteps = (events) => {
+    if (!events || events.length === 0) return null;
+    
+    // Create a map of event types to prevent duplicates in visualization
+    const uniqueEvents = [];
+    const seenEventTypes = new Set();
+    
+    // Process events to identify unique ones, prioritizing those with data
+    for (const event of events) {
+      // Always include certain critical events or events with data
+      const isDataEvent = event.data && Object.keys(event.data).length > 0;
+      const isCriticalEvent = ['tool_identified', 'inputs_extracted', 'tool_response', 'final_answer'].includes(event.type);
+      
+      if (isDataEvent || isCriticalEvent || !seenEventTypes.has(event.type)) {
+        uniqueEvents.push(event);
+        seenEventTypes.add(event.type);
+      }
+    }
+    
+    return (
+      <div className="mt-3 space-y-3 border-t border-gray-600 pt-3">
+        <h4 className="text-gray-300 font-medium mb-2">Processing Steps:</h4>
+        <div className="space-y-3">
+          {uniqueEvents.map((event, index) => {
+            // Skip rendering certain events that don't add value to the UI
+            if (event.type === 'final_answer') return null;
+            
+            // Determine styling based on event type
+            const getEventIcon = () => {
+              switch (event.type) {
+                case 'start':
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                    </svg>
+                  );
+                case 'tool_identified':
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  );
+                case 'inputs_extracted':
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                      <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                    </svg>
+                  );
+                case 'calling_tool':
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                  );
+                case 'tool_response':
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M6.672 1.911a1 1 0 10-1.932.518l.259.966a1 1 0 001.932-.518l-.26-.966zM2.429 4.74a1 1 0 10-.517 1.932l.966.259a1 1 0 00.517-1.932l-.966-.26zm8.814-.569a1 1 0 00-1.415-1.414l-.707.707a1 1 0 101.415 1.415l.707-.708zm-7.071 7.072l.707-.707A1 1 0 003.465 9.12l-.708.707a1 1 0 001.415 1.415zm3.2-5.171a1 1 0 00-1.3 1.3l4 10a1 1 0 001.823.075l1.38-2.759 3.018 3.02a1 1 0 001.414-1.415l-3.019-3.02 2.76-1.379a1 1 0 00-.076-1.822l-10-4z" clipRule="evenodd" />
+                    </svg>
+                  );
+                case 'generating_answer':
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                    </svg>
+                  );
+                case 'complete':
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  );
+                case 'error':
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  );
+                default:
+                  return (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                  );
+              }
+            };
+
+            // Format any data for display
+            const renderData = () => {
+              if (!event.data) return null;
+              
+              // Handle different data types
+              if (event.type === 'tool_identified' && event.data.tool_name) {
+                return (
+                  <div className="mt-2 bg-gray-800 rounded p-3 text-sm">
+                    <p className="text-gray-300 font-medium">Tool: <span className="text-green-400">{event.data.tool_name}</span></p>
+                    {event.data.reason && (
+                      <p className="text-gray-300 mt-1">Reason: {event.data.reason}</p>
+                    )}
+                  </div>
+                );
+              }
+              
+              if (event.type === 'inputs_extracted' && event.data.inputs) {
+                return (
+                  <div className="mt-2 bg-gray-800 rounded p-3 text-sm">
+                    <p className="text-gray-300 font-medium">Inputs:</p>
+                    <pre className="text-gray-300 mt-1 overflow-x-auto whitespace-pre-wrap">
+                      {JSON.stringify(event.data.inputs, null, 2)}
+                    </pre>
+                  </div>
+                );
+              }
+              
+              // For any other data
+              if (Object.keys(event.data).length > 0) {
+                return (
+                  <div className="mt-2 bg-gray-800 rounded p-3 text-sm">
+                    <pre className="text-gray-300 overflow-x-auto whitespace-pre-wrap">
+                      {JSON.stringify(event.data, null, 2)}
+                    </pre>
+                  </div>
+                );
+              }
+              
+              return null;
+            };
+            
+            return (
+              <div key={index} className="flex space-x-3 p-3 bg-gray-800/60 rounded-lg">
+                <div className="flex-shrink-0 mt-1">
+                  {getEventIcon()}
+                </div>
+                <div className="flex-1">
+                  <h5 className="text-sm font-medium text-gray-200">
+                    {event.type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                  </h5>
+                  {event.message && (
+                    <p className="text-sm text-gray-300 mt-1">{event.message}</p>
+                  )}
+                  {renderData()}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   // Render a chat message
@@ -243,7 +407,18 @@ const TxGemmaChat = () => {
                   : 'bg-gray-700 text-white rounded-tl-none'
             }`}
           >
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            {/* For system messages with events, show the steps first then the answer */}
+            {!isUser && message.events && message.events.length > 0 ? (
+              <>
+                {renderEventSteps(message.events)}
+                <div className="mt-3 border-t border-gray-600 pt-3 text-white">
+                  <h4 className="text-gray-300 font-medium mb-2">Final Answer:</h4>
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                </div>
+              </>
+            ) : (
+              <p className="whitespace-pre-wrap">{message.content}</p>
+            )}
           </div>
           
           {/* Timestamp */}
@@ -257,53 +432,7 @@ const TxGemmaChat = () => {
 
   // Render the streaming UI
   const renderStreaming = () => {
-    if (!isProcessing || !currentEvent) return null;
-    
-    let statusMessage = loadingMessage;
-    let progress = 10; // Default starting progress
-    
-    // Determine progress based on event type
-    switch (currentEvent.type) {
-      case 'start':
-        progress = 10;
-        statusMessage = currentEvent.message || "Starting...";
-        break;
-      case 'identifying_tool':
-        progress = 20;
-        statusMessage = currentEvent.message || "Deciding which tool to use...";
-        break;
-      case 'tool_identified':
-        progress = 30;
-        statusMessage = `Using ${currentEvent.data?.tool_name || 'specialized tool'}...`;
-        break;
-      case 'getting_inputs':
-        progress = 40;
-        statusMessage = currentEvent.message || "Extracting required information...";
-        break;
-      case 'inputs_extracted':
-        progress = 50;
-        statusMessage = currentEvent.message || "Preparing to process...";
-        break;
-      case 'calling_tool':
-        progress = 60;
-        statusMessage = currentEvent.message || "Consulting medical knowledge base...";
-        break;
-      case 'tool_response':
-        progress = 70;
-        statusMessage = currentEvent.message || "Received response from knowledge base...";
-        break;
-      case 'generating_answer':
-        progress = 80;
-        statusMessage = currentEvent.message || "Formulating your final answer...";
-        break;
-      case 'complete':
-        progress = 90;
-        statusMessage = currentEvent.message || "Finishing up...";
-        break;
-      default:
-        progress = 50;
-        statusMessage = "Processing...";
-    }
+    if (!isProcessing) return null;
     
     return (
       <div className="flex mb-6 justify-start">
@@ -323,26 +452,22 @@ const TxGemmaChat = () => {
           {/* Message content */}
           <div className="rounded-2xl px-4 py-3 bg-gray-700 text-white rounded-tl-none w-full">
             <div className="flex flex-col">
-              {/* Progress bar */}
-              <div className="w-full bg-gray-600 rounded-full h-2 mb-3">
-                <div 
-                  className="bg-purple-500 h-2 rounded-full transition-all duration-500 ease-in-out"
-                  style={{ width: `${progress}%` }}
-                ></div>
-              </div>
-              
               {/* Status message */}
               <div className="flex items-center text-sm text-gray-300 mb-3">
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                {statusMessage}
+                {loadingMessage}
               </div>
+              
+              {/* Show all events collected so far */}
+              {eventHistory.length > 0 && renderEventSteps(eventHistory)}
               
               {/* Streaming content if available */}
               {streamingContent && (
                 <div className="whitespace-pre-wrap mt-2 border-t border-gray-600 pt-3">
+                  <h4 className="text-gray-300 font-medium mb-2">Current Answer:</h4>
                   {streamingContent}
                 </div>
               )}
