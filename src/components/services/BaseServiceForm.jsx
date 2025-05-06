@@ -11,6 +11,7 @@ const BaseServiceForm = ({
   serviceDescription,
   parameterFields,
   validateParameters = () => null,
+  processParameters = null,
   defaultJobName = '',
   onJobSubmitted = null,
 }) => {
@@ -67,7 +68,10 @@ const BaseServiceForm = ({
     setSuccess(null);
     
     try {
-      const result = await createServiceJob(jobName, serviceType, parameters);
+      // Process parameters if a processing function is provided
+      const processedParams = processParameters ? processParameters(parameters) : parameters;
+      
+      const result = await createServiceJob(jobName, serviceType, processedParams);
       console.log(`${serviceName} job created:`, result);
       setSuccess(`Job "${jobName}" successfully created with ID: ${result.job_id}`);
       
@@ -227,7 +231,12 @@ const BaseServiceForm = ({
                       type="checkbox"
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"
                       checked={parameters[field.name] || false}
-                      onChange={(e) => handleParameterChange(field.name, e.target.checked)}
+                      onChange={(e) => {
+                        handleParameterChange(field.name, e.target.checked);
+                        if (field.customOnChange) {
+                          field.customOnChange(e.target.checked);
+                        }
+                      }}
                     />
                   </div>
                   <div className="ml-3 text-sm">
@@ -251,22 +260,60 @@ const BaseServiceForm = ({
                   >
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
-                  <input
-                    type={field.type || 'text'}
-                    id={field.name}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                      error ? 'border-red-500' : ''
-                    }`}
-                    placeholder={field.placeholder}
-                    value={parameters[field.name] || ''}
-                    onChange={(e) => handleParameterChange(field.name, e.target.value)}
-                    min={field.min}
-                    max={field.max}
-                    step={field.step}
-                  />
-                  {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-                  {field.helpText && (
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{field.helpText}</p>
+                  {field.type === 'file' ? (
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center">
+                        <label className="flex items-center px-4 py-2 bg-white text-blue-600 rounded-lg border border-blue-600 cursor-pointer hover:bg-blue-50 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span>Choose File</span>
+                          <input
+                            type="file"
+                            id={field.name}
+                            className="hidden"
+                            accept={field.accept}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleParameterChange(field.name, file);
+                              }
+                            }}
+                          />
+                        </label>
+                        <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
+                          {parameters[field.name] ? 
+                            (parameters[field.name] instanceof File ? 
+                              parameters[field.name].name : 
+                              parameters[field.name].split('/').pop()) : 
+                            'No file chosen'}
+                        </span>
+                      </div>
+                      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+                      {field.helpText && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{field.helpText}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type={field.type || 'text'}
+                        id={field.name}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                          error ? 'border-red-500' : ''
+                        }`}
+                        placeholder={field.placeholder}
+                        value={parameters[field.name] || ''}
+                        onChange={(e) => handleParameterChange(field.name, e.target.value)}
+                        min={field.min}
+                        max={field.max}
+                        step={field.step}
+                      />
+                      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+                      {field.helpText && (
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{field.helpText}</p>
+                      )}
+                    </>
                   )}
                 </div>
               );

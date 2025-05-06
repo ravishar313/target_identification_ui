@@ -24,10 +24,47 @@ export const fetchAvailableServices = async () => {
         icon: '⚗️',
         description: 'Generate optimized molecular structures using MolMIM'
       },
+      {
+        id: 'diffdock',
+        name: 'DiffDock',
+        icon: '🔍',
+        description: 'Perform protein-ligand docking using DiffDock'
+      }
       // Additional services can be added here as they become available
     ];
   } catch (error) {
     console.error('Error fetching services:', error);
+    throw error;
+  }
+};
+
+/**
+ * Uploads a file to the server
+ * @param {File} file - The file to upload
+ * @returns {Promise<string>} The path to the uploaded file
+ */
+export const uploadFile = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    console.log('Uploading file:', file.name);
+    
+    const response = await fetch(endpoints.fileUploadUrl, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Failed to upload file');
+    }
+    
+    const data = await response.json();
+    console.log('File uploaded successfully:', data);
+    return data.file_path;
+  } catch (error) {
+    console.error('Error uploading file:', error);
     throw error;
   }
 };
@@ -41,6 +78,20 @@ export const fetchAvailableServices = async () => {
  */
 export const createServiceJob = async (jobName, serviceType, parameters) => {
   try {
+    // Process any file uploads before creating the job
+    const processedParams = { ...parameters };
+    
+    // Handle file parameters by uploading them first
+    for (const [key, value] of Object.entries(parameters)) {
+      if (value instanceof File) {
+        console.log(`Uploading ${key} file:`, value.name);
+        const filePath = await uploadFile(value);
+        processedParams[key] = filePath;
+      }
+    }
+    
+    console.log(`Creating ${serviceType} job with parameters:`, processedParams);
+    
     const response = await fetch(endpoints.servicesJobsUrl, {
       method: 'POST',
       headers: {
@@ -49,7 +100,7 @@ export const createServiceJob = async (jobName, serviceType, parameters) => {
       body: JSON.stringify({
         job_name: jobName,
         service_type: serviceType,
-        parameters
+        parameters: processedParams
       }),
     });
 
