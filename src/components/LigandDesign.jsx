@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { endpoints } from '../constants/api';
+import Chart from 'chart.js/auto';
 
 const LigandDesign = ({ data, onNext, onBack }) => {
   const [loading, setLoading] = useState(false);
@@ -18,6 +19,9 @@ const LigandDesign = ({ data, onNext, onBack }) => {
   const [leadsProperties, setLeadsProperties] = useState({});
   const [loadingLeadsProperties, setLoadingLeadsProperties] = useState(false);
   
+  // View state
+  const [activeView, setActiveView] = useState('grid'); // 'grid' or 'summary'
+  
   // Sort and filter states
   const [sortOption, setSortOption] = useState('none');
   const [sortDirection, setSortDirection] = useState('asc');
@@ -32,6 +36,15 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     lipinskiCompliant: { enabled: false, value: true }
   });
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Refs for charts
+  const qedChartRef = useRef(null);
+  const mwChartRef = useRef(null);
+  const logPChartRef = useRef(null);
+  const solubilityChartRef = useRef(null);
+  const lipinskiChartRef = useRef(null);
+  const scatterChartRef = useRef(null);
+  const charts = useRef({});
 
   // Function to submit lead design job
   const submitLeadDesignJob = async () => {
@@ -104,44 +117,60 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     }
   };
 
-  // Function to fetch properties for all leads
+  // Function to fetch properties for all leads in batches
   const fetchAllLeadProperties = async (leads) => {
     if (!leads || leads.length === 0 || loadingLeadsProperties) return;
     
     setLoadingLeadsProperties(true);
     
-    // Create a copy of the current properties
-    const newLeadsProperties = { ...leadsProperties };
-    
-    // Process leads in batches to avoid overwhelming the server
-    const batchSize = 5;
-    for (let i = 0; i < leads.length; i += batchSize) {
-      const batch = leads.slice(i, i + batchSize);
+    try {
+      // Process leads in batches to avoid overwhelming the server
+      const batchSize = 50; // Increased batch size since we're using the batch API
+      const newLeadsProperties = { ...leadsProperties };
       
-      // Filter out leads that already have properties
-      const leadsToFetch = batch.filter(smiles => !newLeadsProperties[smiles]);
-      
-      if (leadsToFetch.length === 0) continue;
-      
-      // Fetch properties for each lead in the batch
-      await Promise.all(
-        leadsToFetch.map(async (smiles) => {
-          try {
-            const properties = await fetchMoleculePropertiesData(smiles);
-            newLeadsProperties[smiles] = properties;
-          } catch (error) {
-            console.error(`Error fetching properties for ${smiles}:`, error);
-            // Set null to indicate failed fetch
-            newLeadsProperties[smiles] = null;
-          }
-        })
-      );
-      
-      // Update state after each batch to show progress
-      setLeadsProperties({ ...newLeadsProperties });
+      for (let i = 0; i < leads.length; i += batchSize) {
+        const batch = leads.slice(i, i + batchSize);
+        
+        // Filter out leads that already have properties
+        const leadsToFetch = batch.filter(smiles => !newLeadsProperties[smiles]);
+        
+        if (leadsToFetch.length === 0) continue;
+        
+        // Use the batch properties API
+        const response = await fetch(endpoints.getBatchMoleculePropertiesUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ smiles_list: leadsToFetch }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch batch molecule properties. Status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        
+        // Map the results to the leads
+        if (responseData.results && responseData.results.length === leadsToFetch.length) {
+          leadsToFetch.forEach((smiles, index) => {
+            const props = responseData.results[index];
+            newLeadsProperties[smiles] = {
+              smiles,
+              properties: props
+            };
+          });
+        }
+        
+        // Update state after each batch to show progress
+        setLeadsProperties({ ...newLeadsProperties });
+      }
+    } catch (error) {
+      console.error('Error fetching lead properties:', error);
+      setError(error.message || 'Failed to fetch lead properties');
+    } finally {
+      setLoadingLeadsProperties(false);
     }
-    
-    setLoadingLeadsProperties(false);
   };
 
   // Function to fetch molecule properties and return data
@@ -1219,6 +1248,670 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     );
   };
 
+  // Generate property statistics for summary view
+  const propertyStats = useMemo(() => {
+    if (!leadData?.leads || Object.keys(leadsProperties).length === 0) return null;
+    
+    // Initialize stats object
+    const stats = {
+      molecularWeight: { min: Infinity, max: -Infinity, avg: 0, counts: {}, compliant: 0 },
+      logP: { min: Infinity, max: -Infinity, avg: 0, counts: {}, compliant: 0 },
+      hBondDonors: { min: Infinity, max: -Infinity, avg: 0, counts: {}, compliant: 0 },
+      hBondAcceptors: { min: Infinity, max: -Infinity, avg: 0, counts: {}, compliant: 0 },
+      solubility: { min: Infinity, max: -Infinity, avg: 0, counts: {}, },
+      qed: { min: Infinity, max: -Infinity, avg: 0, counts: {}, buckets: Array(10).fill(0) },
+      lipinskiViolations: { counts: [0, 0, 0, 0, 0] }, // 0, 1, 2, 3, 4 violations
+      totalCompounds: 0,
+      processedCompounds: 0
+    };
+    
+    // Process each compound
+    const validLeads = leadData.leads.filter(smiles => leadsProperties[smiles]);
+    stats.totalCompounds = leadData.leads.length;
+    stats.processedCompounds = validLeads.length;
+    
+    validLeads.forEach(smiles => {
+      const props = leadsProperties[smiles].properties;
+      
+      // Molecular Weight
+      const mw = props['Molecular Weight'];
+      stats.molecularWeight.min = Math.min(stats.molecularWeight.min, mw);
+      stats.molecularWeight.max = Math.max(stats.molecularWeight.max, mw);
+      stats.molecularWeight.avg += mw;
+      
+      // Create histogram - round to nearest 50
+      const mwBucket = Math.floor(mw / 50) * 50;
+      stats.molecularWeight.counts[mwBucket] = (stats.molecularWeight.counts[mwBucket] || 0) + 1;
+      if (mw <= 500) stats.molecularWeight.compliant++;
+      
+      // LogP
+      const logP = props['LogP'];
+      stats.logP.min = Math.min(stats.logP.min, logP);
+      stats.logP.max = Math.max(stats.logP.max, logP);
+      stats.logP.avg += logP;
+      
+      // Create histogram - round to nearest 0.5
+      const logPBucket = Math.floor(logP / 0.5) * 0.5;
+      stats.logP.counts[logPBucket] = (stats.logP.counts[logPBucket] || 0) + 1;
+      if (logP <= 5) stats.logP.compliant++;
+      
+      // H-Bond Donors
+      const hbd = props['H-Bond Donors'];
+      stats.hBondDonors.min = Math.min(stats.hBondDonors.min, hbd);
+      stats.hBondDonors.max = Math.max(stats.hBondDonors.max, hbd);
+      stats.hBondDonors.avg += hbd;
+      stats.hBondDonors.counts[hbd] = (stats.hBondDonors.counts[hbd] || 0) + 1;
+      if (hbd <= 5) stats.hBondDonors.compliant++;
+      
+      // H-Bond Acceptors
+      const hba = props['H-Bond Acceptors'];
+      stats.hBondAcceptors.min = Math.min(stats.hBondAcceptors.min, hba);
+      stats.hBondAcceptors.max = Math.max(stats.hBondAcceptors.max, hba);
+      stats.hBondAcceptors.avg += hba;
+      stats.hBondAcceptors.counts[hba] = (stats.hBondAcceptors.counts[hba] || 0) + 1;
+      if (hba <= 10) stats.hBondAcceptors.compliant++;
+      
+      // Solubility
+      const sol = props['LogS (Solubility)'];
+      stats.solubility.min = Math.min(stats.solubility.min, sol);
+      stats.solubility.max = Math.max(stats.solubility.max, sol);
+      stats.solubility.avg += sol;
+      
+      // Create histogram - round to nearest 0.5
+      const solBucket = Math.floor(sol / 0.5) * 0.5;
+      stats.solubility.counts[solBucket] = (stats.solubility.counts[solBucket] || 0) + 1;
+      
+      // QED
+      const qed = props['QED'];
+      stats.qed.min = Math.min(stats.qed.min, qed);
+      stats.qed.max = Math.max(stats.qed.max, qed);
+      stats.qed.avg += qed;
+      
+      // QED buckets (0.0-0.1, 0.1-0.2, etc.)
+      const qedBucketIndex = Math.min(Math.floor(qed * 10), 9);
+      stats.qed.buckets[qedBucketIndex]++;
+      
+      // Lipinski violations
+      let violations = 0;
+      if (mw > 500) violations++;
+      if (logP > 5) violations++;
+      if (hbd > 5) violations++;
+      if (hba > 10) violations++;
+      
+      stats.lipinskiViolations.counts[violations]++;
+    });
+    
+    // Calculate averages
+    if (validLeads.length > 0) {
+      stats.molecularWeight.avg /= validLeads.length;
+      stats.logP.avg /= validLeads.length;
+      stats.hBondDonors.avg /= validLeads.length;
+      stats.hBondAcceptors.avg /= validLeads.length;
+      stats.solubility.avg /= validLeads.length;
+      stats.qed.avg /= validLeads.length;
+    }
+    
+    return stats;
+  }, [leadData, leadsProperties]);
+
+  // Render summary view
+  const renderSummaryView = () => {
+    if (!propertyStats) {
+      return (
+        <div className="flex justify-center items-center p-8">
+          <svg className="animate-spin h-8 w-8 text-pharma-blue dark:text-pharma-teal" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span className="ml-2 text-gray-600 dark:text-gray-300">Generating summary statistics...</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-6">
+        {/* Overall stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Compounds</div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{propertyStats.totalCompounds}</div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Lipinski Compliant</div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
+              {propertyStats.lipinskiViolations.counts[0]} 
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
+                ({Math.round((propertyStats.lipinskiViolations.counts[0] / propertyStats.processedCompounds) * 100)}%)
+              </span>
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Average QED</div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
+              {propertyStats.qed.avg.toFixed(2)}
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Average Solubility (LogS)</div>
+            <div className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
+              {propertyStats.solubility.avg.toFixed(2)}
+            </div>
+          </div>
+        </div>
+        
+        {/* Property distributions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Lipinski Rule of Five Compliance */}
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Lipinski's Rule of Five Violations</h4>
+            <div className="h-64 relative">
+              <canvas ref={lipinskiChartRef}></canvas>
+            </div>
+          </div>
+          
+          {/* QED Distribution */}
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">QED Distribution</h4>
+            <div className="h-64 relative">
+              <canvas ref={qedChartRef}></canvas>
+            </div>
+          </div>
+          
+          {/* MW Distribution */}
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              Molecular Weight Distribution
+              <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                (Lipinski: ≤ 500 Da)
+              </span>
+            </h4>
+            <div className="h-64 relative">
+              <canvas ref={mwChartRef}></canvas>
+            </div>
+          </div>
+          
+          {/* LogP Distribution */}
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              LogP Distribution
+              <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                (Lipinski: ≤ 5)
+              </span>
+            </h4>
+            <div className="h-64 relative">
+              <canvas ref={logPChartRef}></canvas>
+            </div>
+          </div>
+          
+          {/* Solubility Distribution */}
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              Solubility Distribution (LogS)
+            </h4>
+            <div className="h-64 relative">
+              <canvas ref={solubilityChartRef}></canvas>
+            </div>
+          </div>
+          
+          {/* Solubility vs LogP Scatter Plot */}
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              Property Relationship: Solubility vs LogP
+            </h4>
+            <div className="h-64 relative">
+              <canvas ref={scatterChartRef}></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Initialize charts when propertyStats changes
+  useEffect(() => {
+    if (!propertyStats || activeView !== 'summary') {
+      // Destroy existing charts when not in summary view
+      Object.values(charts.current).forEach(chart => {
+        if (chart) chart.destroy();
+      });
+      charts.current = {};
+      return;
+    }
+    
+    // Helper to get theme colors
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const getTextColor = () => isDarkMode ? 'rgba(229, 231, 235, 0.8)' : 'rgba(55, 65, 81, 0.8)';
+    const getGridColor = () => isDarkMode ? 'rgba(75, 85, 99, 0.2)' : 'rgba(209, 213, 219, 0.5)';
+    
+    // Destroy existing charts
+    Object.values(charts.current).forEach(chart => {
+      if (chart) chart.destroy();
+    });
+    charts.current = {};
+    
+    // Wait for DOM to update and canvas elements to be visible
+    setTimeout(() => {
+      // Initialize all charts
+      initializeCharts(getTextColor(), getGridColor());
+    }, 0);
+    
+    // Cleanup when component unmounts or view changes
+    return () => {
+      Object.values(charts.current).forEach(chart => {
+        if (chart) chart.destroy();
+      });
+      charts.current = {};
+    };
+  }, [propertyStats, activeView]);
+  
+  // Function to initialize all charts
+  const initializeCharts = (textColor, gridColor) => {
+    if (!propertyStats) return;
+    
+    // Chart options that apply to most charts
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          enabled: true
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            color: gridColor
+          },
+          ticks: {
+            color: textColor
+          }
+        },
+        y: {
+          grid: {
+            color: gridColor
+          },
+          ticks: {
+            color: textColor
+          }
+        }
+      }
+    };
+    
+    // Lipinski Violations Chart
+    if (lipinskiChartRef.current) {
+      // Clear any existing chart for this canvas
+      if (charts.current.lipinski) {
+        charts.current.lipinski.destroy();
+      }
+      
+      const violations = [0, 1, 2, 3, 4];
+      const data = propertyStats.lipinskiViolations.counts;
+      const colors = [
+        'rgba(34, 197, 94, 0.8)',  // Green for 0 violations
+        'rgba(234, 179, 8, 0.8)',   // Yellow for 1 violation
+        'rgba(249, 115, 22, 0.8)',  // Orange for 2 violations
+        'rgba(239, 68, 68, 0.8)',   // Red for 3 violations
+        'rgba(185, 28, 28, 0.8)'    // Dark red for 4 violations
+      ];
+      
+      charts.current.lipinski = new Chart(lipinskiChartRef.current, {
+        type: 'bar',
+        data: {
+          labels: violations.map(v => `${v} ${v === 1 ? 'Violation' : 'Violations'}`),
+          datasets: [{
+            label: 'Number of Compounds',
+            data: data,
+            backgroundColor: colors,
+            borderColor: colors.map(c => c.replace('0.8', '1.0')),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          ...commonOptions,
+          plugins: {
+            ...commonOptions.plugins,
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.raw;
+                  const percentage = (value / propertyStats.processedCompounds * 100).toFixed(1);
+                  return `Compounds: ${value} (${percentage}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // QED Distribution Chart
+    if (qedChartRef.current) {
+      // Clear any existing chart for this canvas
+      if (charts.current.qed) {
+        charts.current.qed.destroy();
+      }
+      
+      const labels = Array.from({length: 10}, (_, i) => `${(i * 0.1).toFixed(1)}-${((i + 1) * 0.1).toFixed(1)}`);
+      
+      charts.current.qed = new Chart(qedChartRef.current, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'QED Score',
+            data: propertyStats.qed.buckets,
+            backgroundColor: 'rgba(6, 182, 212, 0.8)',
+            borderColor: 'rgba(6, 182, 212, 1.0)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          ...commonOptions,
+          plugins: {
+            ...commonOptions.plugins,
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.raw;
+                  const percentage = (value / propertyStats.processedCompounds * 100).toFixed(1);
+                  return `Compounds: ${value} (${percentage}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Molecular Weight Distribution Chart
+    if (mwChartRef.current) {
+      // Clear any existing chart for this canvas
+      if (charts.current.mw) {
+        charts.current.mw.destroy();
+      }
+      
+      const mwBuckets = Object.keys(propertyStats.molecularWeight.counts)
+        .map(bucket => Number(bucket))
+        .sort((a, b) => a - b);
+      
+      const mwCounts = mwBuckets.map(bucket => propertyStats.molecularWeight.counts[bucket]);
+      
+      // Color based on Lipinski compliance
+      const backgroundColor = mwBuckets.map(bucket => 
+        bucket <= 500 ? 'rgba(6, 182, 212, 0.8)' : 'rgba(239, 68, 68, 0.8)'
+      );
+      
+      const borderColor = mwBuckets.map(bucket => 
+        bucket <= 500 ? 'rgba(6, 182, 212, 1.0)' : 'rgba(239, 68, 68, 1.0)'
+      );
+      
+      charts.current.mw = new Chart(mwChartRef.current, {
+        type: 'bar',
+        data: {
+          labels: mwBuckets.map(bucket => `${bucket}`),
+          datasets: [{
+            label: 'Molecular Weight',
+            data: mwCounts,
+            backgroundColor: backgroundColor,
+            borderColor: borderColor,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          ...commonOptions,
+          plugins: {
+            ...commonOptions.plugins,
+            tooltip: {
+              callbacks: {
+                title: function(context) {
+                  const value = Number(context[0].label);
+                  return `${value} - ${value + 50} Da`;
+                },
+                label: function(context) {
+                  const value = context.raw;
+                  const percentage = (value / propertyStats.processedCompounds * 100).toFixed(1);
+                  return `Compounds: ${value} (${percentage}%)`;
+                },
+                footer: function(context) {
+                  const value = Number(context[0].label);
+                  return value <= 500 ? 'Lipinski Compliant' : 'Exceeds Lipinski Limit';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // LogP Distribution Chart
+    if (logPChartRef.current) {
+      // Clear any existing chart for this canvas
+      if (charts.current.logP) {
+        charts.current.logP.destroy();
+      }
+      
+      const logPBuckets = Object.keys(propertyStats.logP.counts)
+        .map(bucket => Number(bucket))
+        .sort((a, b) => a - b);
+      
+      const logPCounts = logPBuckets.map(bucket => propertyStats.logP.counts[bucket]);
+      
+      // Color based on Lipinski compliance
+      const backgroundColor = logPBuckets.map(bucket => 
+        bucket <= 5 ? 'rgba(6, 182, 212, 0.8)' : 'rgba(239, 68, 68, 0.8)'
+      );
+      
+      const borderColor = logPBuckets.map(bucket => 
+        bucket <= 5 ? 'rgba(6, 182, 212, 1.0)' : 'rgba(239, 68, 68, 1.0)'
+      );
+      
+      charts.current.logP = new Chart(logPChartRef.current, {
+        type: 'bar',
+        data: {
+          labels: logPBuckets.map(bucket => bucket.toFixed(1)),
+          datasets: [{
+            label: 'LogP',
+            data: logPCounts,
+            backgroundColor: backgroundColor,
+            borderColor: borderColor,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          ...commonOptions,
+          plugins: {
+            ...commonOptions.plugins,
+            tooltip: {
+              callbacks: {
+                title: function(context) {
+                  const value = Number(context[0].label);
+                  return `LogP: ${value.toFixed(1)}`;
+                },
+                label: function(context) {
+                  const value = context.raw;
+                  const percentage = (value / propertyStats.processedCompounds * 100).toFixed(1);
+                  return `Compounds: ${value} (${percentage}%)`;
+                },
+                footer: function(context) {
+                  const value = Number(context[0].label);
+                  return value <= 5 ? 'Lipinski Compliant' : 'Exceeds Lipinski Limit';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Solubility Distribution Chart
+    if (solubilityChartRef.current) {
+      // Clear any existing chart for this canvas
+      if (charts.current.solubility) {
+        charts.current.solubility.destroy();
+      }
+      
+      const solBuckets = Object.keys(propertyStats.solubility.counts)
+        .map(bucket => Number(bucket))
+        .sort((a, b) => a - b);
+      
+      const solCounts = solBuckets.map(bucket => propertyStats.solubility.counts[bucket]);
+      
+      // Color based on solubility level
+      const getColorForSolubility = (value) => {
+        if (value >= -1) return ['rgba(34, 197, 94, 0.8)', 'rgba(34, 197, 94, 1.0)']; // Highly soluble
+        if (value >= -2) return ['rgba(74, 222, 128, 0.8)', 'rgba(74, 222, 128, 1.0)']; // Soluble
+        if (value >= -4) return ['rgba(234, 179, 8, 0.8)', 'rgba(234, 179, 8, 1.0)']; // Moderately soluble
+        if (value >= -6) return ['rgba(249, 115, 22, 0.8)', 'rgba(249, 115, 22, 1.0)']; // Poorly soluble
+        return ['rgba(239, 68, 68, 0.8)', 'rgba(239, 68, 68, 1.0)']; // Very poorly soluble
+      };
+      
+      const backgroundColor = solBuckets.map(bucket => getColorForSolubility(bucket)[0]);
+      const borderColor = solBuckets.map(bucket => getColorForSolubility(bucket)[1]);
+      
+      charts.current.solubility = new Chart(solubilityChartRef.current, {
+        type: 'bar',
+        data: {
+          labels: solBuckets.map(bucket => bucket.toFixed(1)),
+          datasets: [{
+            label: 'Solubility (LogS)',
+            data: solCounts,
+            backgroundColor: backgroundColor,
+            borderColor: borderColor,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          ...commonOptions,
+          plugins: {
+            ...commonOptions.plugins,
+            tooltip: {
+              callbacks: {
+                title: function(context) {
+                  const value = Number(context[0].label);
+                  return `LogS: ${value.toFixed(1)}`;
+                },
+                label: function(context) {
+                  const value = context.raw;
+                  const percentage = (value / propertyStats.processedCompounds * 100).toFixed(1);
+                  return `Compounds: ${value} (${percentage}%)`;
+                },
+                footer: function(context) {
+                  const value = Number(context[0].label);
+                  if (value >= -1) return 'Highly Soluble';
+                  if (value >= -2) return 'Soluble';
+                  if (value >= -4) return 'Moderately Soluble';
+                  if (value >= -6) return 'Poorly Soluble';
+                  return 'Very Poorly Soluble';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // LogP vs Solubility Scatter Plot
+    if (scatterChartRef.current) {
+      // Clear any existing chart for this canvas
+      if (charts.current.scatter) {
+        charts.current.scatter.destroy();
+      }
+      
+      // Get all valid leads with their properties
+      const validLeads = Object.entries(leadsProperties)
+        .filter(([_, props]) => props && props.properties)
+        .map(([smiles, props]) => ({
+          smiles,
+          logP: props.properties['LogP'],
+          solubility: props.properties['LogS (Solubility)'],
+          qed: props.properties['QED'],
+          mw: props.properties['Molecular Weight']
+        }));
+        
+      // Create dataset with point size based on QED and color based on MW
+      charts.current.scatter = new Chart(scatterChartRef.current, {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Compounds',
+            data: validLeads.map(lead => ({
+              x: lead.logP,
+              y: lead.solubility,
+              r: lead.qed * 7 + 2, // Size by QED
+              smiles: lead.smiles,
+              mw: lead.mw
+            })),
+            backgroundColor: validLeads.map(lead => {
+              // Color by MW (red for high, blue for low)
+              const normalizedMW = Math.min(Math.max((lead.mw - 200) / 500, 0), 1);
+              return `rgba(${Math.round(6 + normalizedMW * 233)}, ${Math.round(182 - normalizedMW * 182)}, ${Math.round(212 - normalizedMW * 168)}, 0.7)`;
+            }),
+            pointRadius: validLeads.map(lead => lead.qed * 7 + 2), // Size by QED
+            pointHoverRadius: validLeads.map(lead => lead.qed * 7 + 5),
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.3)'
+          }]
+        },
+        options: {
+          ...commonOptions,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'LogP',
+                color: textColor
+              },
+              grid: {
+                color: gridColor
+              },
+              ticks: {
+                color: textColor
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Solubility (LogS)',
+                color: textColor
+              },
+              grid: {
+                color: gridColor
+              },
+              ticks: {
+                color: textColor
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const point = context.raw;
+                  return [
+                    `SMILES: ${point.smiles.substring(0, 20)}...`,
+                    `LogP: ${point.x.toFixed(2)}`,
+                    `Solubility: ${point.y.toFixed(2)}`,
+                    `MW: ${point.mw.toFixed(1)} Da`,
+                    `QED: ${(point.r - 2) / 7}` // Convert back from size to QED
+                  ];
+                }
+              }
+            },
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="space-y-6">
@@ -1340,11 +2033,39 @@ const LigandDesign = ({ data, onNext, onBack }) => {
               </div>
             )}
             
-            {/* Sort and filter controls */}
-            {leadData.status === 'completed' && renderSortAndFilterControls()}
+            {/* View tabs - only show when completed */}
+            {leadData.status === 'completed' && leadData.leads && leadData.leads.length > 0 && (
+              <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
+                <div className="flex space-x-4">
+                  <button
+                    onClick={() => setActiveView('grid')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm focus:outline-none ${
+                      activeView === 'grid'
+                        ? 'border-pharma-blue dark:border-pharma-teal text-pharma-blue dark:text-pharma-teal'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    Grid View
+                  </button>
+                  <button
+                    onClick={() => setActiveView('summary')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm focus:outline-none ${
+                      activeView === 'summary'
+                        ? 'border-pharma-blue dark:border-pharma-teal text-pharma-blue dark:text-pharma-teal'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    Summary
+                  </button>
+                </div>
+              </div>
+            )}
             
-            {/* Lead compounds list */}
-            {leadData.leads && leadData.leads.length > 0 ? (
+            {/* Sort and filter controls - only shown in grid view */}
+            {leadData.status === 'completed' && activeView === 'grid' && renderSortAndFilterControls()}
+            
+            {/* Lead compounds grid view */}
+            {leadData.leads && leadData.leads.length > 0 && activeView === 'grid' ? (
               <div className="mt-4 max-h-[600px] overflow-y-auto p-1">
                 {/* Loading indicator for properties */}
                 {loadingLeadsProperties && Object.keys(leadsProperties).length === 0 && (
@@ -1387,6 +2108,11 @@ const LigandDesign = ({ data, onNext, onBack }) => {
                   }
                 </div>
               </div>
+            ) : leadData.status === 'completed' && activeView === 'summary' ? (
+              // Summary view 
+              <div className="mt-4">
+                {renderSummaryView()}
+              </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 italic">
                 {leadData.status === 'running' 
@@ -1396,6 +2122,9 @@ const LigandDesign = ({ data, onNext, onBack }) => {
             )}
           </div>
         )}
+
+        {/* Molecule details modal */}
+        {renderMoleculeDetailsModal()}
 
         {/* Action Buttons */}
         <div className="flex justify-between mt-8">
@@ -1439,9 +2168,6 @@ const LigandDesign = ({ data, onNext, onBack }) => {
           </div>
         </div>
       </div>
-
-      {/* Molecule details modal */}
-      {renderMoleculeDetailsModal()}
     </div>
   );
 };
