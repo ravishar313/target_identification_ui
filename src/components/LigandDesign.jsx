@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { endpoints } from '../constants/api';
 import Chart from 'chart.js/auto';
+import * as d3 from 'd3';
+import _ from 'lodash';
 
 const LigandDesign = ({ data, onNext, onBack }) => {
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
   const [loadingLeadsProperties, setLoadingLeadsProperties] = useState(false);
   
   // View state
-  const [activeView, setActiveView] = useState('grid'); // 'grid' or 'summary'
+  const [activeView, setActiveView] = useState('grid'); // 'grid', 'summary', or 'similarity'
   
   // Sort and filter states
   const [sortOption, setSortOption] = useState('none');
@@ -36,6 +38,15 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     lipinskiCompliant: { enabled: false, value: true }
   });
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Similarity analysis states
+  const [similarityMatrix, setSimilarityMatrix] = useState(null);
+  const [loadingSimilarity, setLoadingSimilarity] = useState(false);
+  const [similarityError, setSimilarityError] = useState(null);
+  const [validSmiles, setValidSmiles] = useState([]);
+  const [clusterCount, setClusterCount] = useState(5);
+  const [similarityCutoff, setSimilarityCutoff] = useState(0.7);
+  const [selectedCluster, setSelectedCluster] = useState(null);
 
   // Refs for charts
   const qedChartRef = useRef(null);
@@ -44,6 +55,8 @@ const LigandDesign = ({ data, onNext, onBack }) => {
   const solubilityChartRef = useRef(null);
   const lipinskiChartRef = useRef(null);
   const scatterChartRef = useRef(null);
+  const similarityMatrixRef = useRef(null);
+  const similarityNetworkRef = useRef(null);
   const charts = useRef({});
 
   // Function to submit lead design job
@@ -1912,6 +1925,859 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     }
   };
 
+  // Function to calculate similarity matrix
+  const calculateSimilarity = async () => {
+    if (!leadData?.leads || leadData.leads.length === 0) return;
+    
+    setLoadingSimilarity(true);
+    setSimilarityError(null);
+    
+    try {
+      // Use the filtered leads if available, otherwise use all leads
+      // Limit to a reasonable number if too many leads
+      const smilesForAnalysis = filteredAndSortedLeads.length > 0 
+        ? filteredAndSortedLeads.slice(0, 100) 
+        : leadData.leads.slice(0, 100);
+      
+      const response = await fetch(endpoints.calculateSimilarityUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ smiles_list: smilesForAnalysis }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to calculate similarity matrix. Status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      setSimilarityMatrix(responseData.similarity_matrix);
+      setValidSmiles(responseData.valid_smiles);
+      
+      // Reset selected cluster when calculating new similarity
+      setSelectedCluster(null);
+    } catch (error) {
+      console.error('Error calculating similarity matrix:', error);
+      setSimilarityError(error.message || 'Failed to calculate similarity matrix');
+    } finally {
+      setLoadingSimilarity(false);
+    }
+  };
+  
+  // Calculate clusters from similarity matrix
+  const getClusteredData = useMemo(() => {
+    if (!similarityMatrix || !validSmiles || validSmiles.length === 0) return null;
+    
+    // Simple hierarchical clustering based on similarity cutoff
+    const clusters = [];
+    const assigned = new Set();
+    
+    // Create a distance matrix (1 - similarity)
+    const distMatrix = similarityMatrix.map(row => 
+      row.map(val => 1 - val)
+    );
+    
+    // Find clusters using a greedy approach
+    for (let i = 0; i < validSmiles.length; i++) {
+      if (assigned.has(i)) continue;
+      
+      const cluster = [i];
+      assigned.add(i);
+      
+      for (let j = 0; j < validSmiles.length; j++) {
+        if (i === j || assigned.has(j)) continue;
+        
+        // Check similarity against all current cluster members
+        let allSimilar = true;
+        for (const clusterItemIdx of cluster) {
+          if (similarityMatrix[clusterItemIdx][j] < similarityCutoff) {
+            allSimilar = false;
+            break;
+          }
+        }
+        
+        if (allSimilar) {
+          cluster.push(j);
+          assigned.add(j);
+        }
+      }
+      
+      clusters.push({
+        id: clusters.length,
+        indices: cluster,
+        members: cluster.map(idx => ({
+          index: idx,
+          smiles: validSmiles[idx],
+          properties: leadsProperties[validSmiles[idx]]?.properties
+        }))
+      });
+    }
+    
+    // Sort clusters by size (descending)
+    clusters.sort((a, b) => b.members.length - a.members.length);
+    
+    // Limit to requested cluster count
+    const topClusters = clusters.slice(0, clusterCount);
+    
+    // Get molecules not in top clusters
+    const remainingIndices = [...Array(validSmiles.length).keys()]
+      .filter(i => !topClusters.some(c => c.indices.includes(i)));
+    
+    if (remainingIndices.length > 0) {
+      topClusters.push({
+        id: topClusters.length,
+        indices: remainingIndices,
+        members: remainingIndices.map(idx => ({
+          index: idx,
+          smiles: validSmiles[idx],
+          properties: leadsProperties[validSmiles[idx]]?.properties
+        })),
+        isOther: true
+      });
+    }
+    
+    return {
+      clusters: topClusters,
+      matrix: similarityMatrix,
+      smiles: validSmiles
+    };
+  }, [similarityMatrix, validSmiles, leadsProperties, clusterCount, similarityCutoff]);
+
+  // Render the similarity view
+  const renderSimilarityView = () => {
+    if (loadingSimilarity) {
+      return (
+        <div className="flex justify-center items-center p-8">
+          <svg className="animate-spin h-8 w-8 text-pharma-blue dark:text-pharma-teal" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span className="ml-2 text-gray-600 dark:text-gray-300">Calculating similarity between molecules...</span>
+        </div>
+      );
+    }
+    
+    if (similarityError) {
+      return (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 text-red-700 dark:text-red-400">
+          <h3 className="text-lg font-medium mb-2">Error calculating similarity</h3>
+          <p>{similarityError}</p>
+          <button 
+            onClick={calculateSimilarity}
+            className="mt-3 px-4 py-2 bg-pharma-blue dark:bg-pharma-teal text-white rounded hover:bg-pharma-blue-dark dark:hover:bg-pharma-teal-dark"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    
+    if (!similarityMatrix) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Calculate similarity between molecules to see structural relationships.
+          </p>
+          <button 
+            onClick={calculateSimilarity}
+            className="px-4 py-2 bg-pharma-blue dark:bg-pharma-teal text-white rounded hover:bg-pharma-blue-dark dark:hover:bg-pharma-teal-dark"
+          >
+            Calculate Similarity
+          </button>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-6">
+        {/* Controls */}
+        <div className="bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Similarity Analysis
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Analyzing similarity across {validSmiles.length} molecules
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="w-full sm:w-48">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Similarity Cutoff
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="0.9"
+                    step="0.05"
+                    value={similarityCutoff}
+                    onChange={(e) => setSimilarityCutoff(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-sm font-medium w-10 text-gray-700 dark:text-gray-300">
+                    {similarityCutoff.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <div className="w-full sm:w-48">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Cluster Count
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="2"
+                    max="10"
+                    step="1"
+                    value={clusterCount}
+                    onChange={(e) => setClusterCount(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-sm font-medium w-6 text-gray-700 dark:text-gray-300">
+                    {clusterCount}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={calculateSimilarity}
+                className="px-4 py-2 bg-pharma-blue dark:bg-pharma-teal text-white text-sm rounded hover:bg-pharma-blue-dark dark:hover:bg-pharma-teal-dark"
+              >
+                Recalculate
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Clustered Molecules View */}
+        {getClusteredData && (
+          <div className="bg-white dark:bg-gray-700 rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Molecule Clusters
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {getClusteredData.clusters.length} clusters identified based on structural similarity
+              </p>
+            </div>
+            {/* Cluster tabs */}
+            <div className="border-b border-gray-200 dark:border-gray-600">
+              <div className="flex overflow-x-auto px-4 py-2 space-x-2">
+                <button
+                  onClick={() => setSelectedCluster(null)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap ${
+                    selectedCluster === null 
+                      ? 'bg-pharma-blue dark:bg-pharma-teal text-white'
+                      : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
+                  }`}
+                >
+                  All Clusters
+                </button>
+                {getClusteredData.clusters.map(cluster => (
+                  <button
+                    key={cluster.id}
+                    onClick={() => setSelectedCluster(cluster)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap ${
+                      selectedCluster === cluster 
+                        ? 'bg-pharma-blue dark:bg-pharma-teal text-white'
+                        : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
+                    }`}
+                  >
+                    Cluster {cluster.id + 1} ({cluster.members.length})
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Visualizations */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+              {/* Network Graph */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 min-h-64">
+                <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Similarity Network
+                </h4>
+                <div className="h-[400px] relative bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                  <div id="similarity-network" ref={similarityNetworkRef} className="absolute inset-0"></div>
+                </div>
+              </div>
+              
+              {/* Heatmap */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 min-h-64">
+                <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Similarity Matrix
+                </h4>
+                <div className="h-[400px] relative bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 overflow-hidden">
+                  <div id="similarity-matrix" ref={similarityMatrixRef} className="absolute inset-0"></div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Molecule Grid (selected cluster) */}
+            <div className="p-4">
+              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {selectedCluster 
+                  ? `Molecules in Cluster ${selectedCluster.id + 1}` 
+                  : 'All Molecules by Cluster'}
+              </h4>
+              
+              {selectedCluster ? (
+                // Display molecules in selected cluster
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4 max-h-[500px] overflow-y-auto p-1">
+                  {selectedCluster.members.map((member, idx) => (
+                    <div 
+                      key={idx}
+                      className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all cursor-pointer"
+                      onClick={() => handleMoleculeSelect(member.smiles)}
+                    >
+                      {/* Molecule Image */}
+                      <div className="flex justify-center bg-gray-50 dark:bg-gray-800 rounded-md p-2 mb-3 h-32 items-center">
+                        {member.properties ? (
+                          <img 
+                            src={member.properties['Molecule Image (base64)']} 
+                            alt="Molecular Structure" 
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        ) : (
+                          <div className="text-sm text-gray-400 dark:text-gray-500 text-center">
+                            Image not available
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* SMILES string */}
+                      <div className="text-xs font-mono text-gray-600 dark:text-gray-300 mb-3 truncate" title={member.smiles}>
+                        {formatSmiles(member.smiles)}
+                      </div>
+                      
+                      {/* Properties display */}
+                      {member.properties && (
+                        <div className="space-y-1">
+                          <div className="grid grid-cols-2 gap-1">
+                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">MW</div>
+                            <div className="text-xs text-gray-800 dark:text-gray-200">
+                              {formatPropertyValue('Molecular Weight', member.properties['Molecular Weight'])}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1">
+                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">LogP</div>
+                            <div className="text-xs text-gray-800 dark:text-gray-200">
+                              {formatPropertyValue('LogP', member.properties['LogP'])}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1">
+                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">QED</div>
+                            <div className="text-xs text-gray-800 dark:text-gray-200">
+                              {formatPropertyValue('QED', member.properties['QED'])}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // Display cluster overview
+                <div className="space-y-6 mt-4 max-h-[500px] overflow-y-auto p-1">
+                  {getClusteredData.clusters.map(cluster => (
+                    <div key={cluster.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h5 className="text-md font-medium text-gray-700 dark:text-gray-300">
+                          Cluster {cluster.id + 1} 
+                          <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                            ({cluster.members.length} molecules)
+                          </span>
+                        </h5>
+                        <button
+                          onClick={() => setSelectedCluster(cluster)}
+                          className="text-xs text-pharma-blue dark:text-pharma-teal hover:underline"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 mt-2">
+                        {cluster.members.slice(0, 6).map((member, idx) => (
+                          <div 
+                            key={idx}
+                            className="bg-white dark:bg-gray-700 rounded p-2 hover:shadow cursor-pointer"
+                            onClick={() => handleMoleculeSelect(member.smiles)}
+                          >
+                            {member.properties ? (
+                              <img 
+                                src={member.properties['Molecule Image (base64)']} 
+                                alt="Molecular Structure" 
+                                className="w-full h-20 object-contain mb-1"
+                              />
+                            ) : (
+                              <div className="w-full h-20 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-xs text-gray-400">
+                                No image
+                              </div>
+                            )}
+                            <div className="text-xs text-center truncate">
+                              {formatPropertyValue('QED', member.properties?.['QED'] || 'N/A')}
+                            </div>
+                          </div>
+                        ))}
+                        {cluster.members.length > 6 && (
+                          <div 
+                            className="bg-gray-100 dark:bg-gray-600 rounded p-2 flex items-center justify-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-500"
+                            onClick={() => setSelectedCluster(cluster)}
+                          >
+                            <div className="text-sm text-gray-500 dark:text-gray-300 text-center">
+                              +{cluster.members.length - 6} more
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Initialize D3 visualizations when similarity data changes
+  useEffect(() => {
+    if (!similarityMatrix || !validSmiles || activeView !== 'similarity') {
+      return;
+    }
+
+    // Clear previous visualizations
+    d3.select(similarityMatrixRef.current).selectAll("*").remove();
+    d3.select(similarityNetworkRef.current).selectAll("*").remove();
+    
+    // Create the visualizations with a slight delay to ensure DOM is ready
+    setTimeout(() => {
+      createSimilarityMatrixVisualization();
+      createSimilarityNetworkVisualization();
+    }, 100);
+
+    // Cleanup function
+    return () => {
+      d3.select(similarityMatrixRef.current).selectAll("*").remove();
+      d3.select(similarityNetworkRef.current).selectAll("*").remove();
+    };
+  }, [similarityMatrix, validSmiles, activeView, selectedCluster]);
+
+  // Function to create similarity matrix heatmap using D3
+  const createSimilarityMatrixVisualization = () => {
+    if (!similarityMatrix || !validSmiles || !similarityMatrixRef.current) return;
+
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+    const backgroundColor = isDarkMode ? '#1f2937' : '#ffffff';
+    
+    const width = similarityMatrixRef.current.clientWidth;
+    const height = similarityMatrixRef.current.clientHeight;
+    const padding = { top: 50, right: 20, bottom: 20, left: 50 };
+
+    // Get clustered data for visualization
+    const data = getClusteredData;
+    if (!data) return;
+    
+    // Create color scale
+    const colorScale = d3.scaleSequential()
+      .domain([0, 1])
+      .interpolator(d3.interpolateViridis);
+
+    // Create SVG
+    const svg = d3.select(similarityMatrixRef.current)
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    // Determine which molecules to show based on selected cluster
+    let indices = [];
+    let molecules = [];
+    
+    if (selectedCluster) {
+      indices = selectedCluster.indices;
+      molecules = selectedCluster.members.map(m => m.smiles);
+    } else {
+      indices = [...Array(validSmiles.length).keys()];
+      molecules = validSmiles;
+    }
+    
+    // Limit to a reasonable number to avoid crowding
+    const maxDisplay = 50;
+    if (indices.length > maxDisplay) {
+      indices = indices.slice(0, maxDisplay);
+      molecules = molecules.slice(0, maxDisplay);
+    }
+    
+    // Create scales
+    const xScale = d3.scaleBand()
+      .domain(indices.map(i => i))
+      .range([padding.left, width - padding.right])
+      .padding(0.05);
+      
+    const yScale = d3.scaleBand()
+      .domain(indices.map(i => i))
+      .range([padding.top, height - padding.bottom])
+      .padding(0.05);
+    
+    // Create cells
+    const cells = svg.selectAll('rect')
+      .data(indices.flatMap(i => indices.map(j => ({
+        row: i,
+        col: j,
+        value: similarityMatrix[i][j]
+      }))))
+      .join('rect')
+        .attr('x', d => xScale(d.col))
+        .attr('y', d => yScale(d.row))
+        .attr('width', xScale.bandwidth())
+        .attr('height', yScale.bandwidth())
+        .attr('fill', d => colorScale(d.value))
+        .attr('stroke', 'none')
+        .on('mouseover', function(event, d) {
+          d3.select(this).attr('stroke', '#ff0000').attr('stroke-width', 2);
+          
+          // Show tooltip
+          const tooltip = d3.select(similarityMatrixRef.current)
+            .append('div')
+            .attr('class', 'tooltip')
+            .style('position', 'absolute')
+            .style('background-color', isDarkMode ? '#374151' : '#f3f4f6')
+            .style('color', textColor)
+            .style('padding', '5px')
+            .style('border-radius', '4px')
+            .style('font-size', '12px')
+            .style('pointer-events', 'none')
+            .style('z-index', 100)
+            .style('left', `${event.pageX - similarityMatrixRef.current.getBoundingClientRect().left + 10}px`)
+            .style('top', `${event.pageY - similarityMatrixRef.current.getBoundingClientRect().top - 28}px`);
+            
+          tooltip.html(`
+            <div>Similarity: ${d.value.toFixed(2)}</div>
+            <div>Molecule 1: ${validSmiles[d.row].substring(0, 20)}...</div>
+            <div>Molecule 2: ${validSmiles[d.col].substring(0, 20)}...</div>
+          `);
+        })
+        .on('mouseout', function() {
+          d3.select(this).attr('stroke', 'none');
+          d3.select(similarityMatrixRef.current).selectAll('.tooltip').remove();
+        });
+        
+    // Add axes labels if not too many molecules
+    if (indices.length <= 20) {
+      // X axis
+      svg.append('g')
+        .attr('transform', `translate(0,${padding.top - 5})`)
+        .call(d3.axisTop(xScale)
+          .tickFormat(i => (i + 1))
+        )
+        .selectAll('text')
+          .attr('fill', textColor)
+          .attr('transform', 'rotate(-45)')
+          .style('text-anchor', 'start');
+
+      // Y axis
+      svg.append('g')
+        .attr('transform', `translate(${padding.left - 5},0)`)
+        .call(d3.axisLeft(yScale)
+          .tickFormat(i => (i + 1))
+        )
+        .selectAll('text')
+          .attr('fill', textColor);
+    }
+    
+    // Add color legend
+    const legendWidth = 200;
+    const legendHeight = 20;
+    
+    const legendX = width - legendWidth - padding.right;
+    const legendY = 20;
+    
+    const defs = svg.append('defs');
+    
+    const linearGradient = defs.append('linearGradient')
+      .attr('id', 'similarity-gradient')
+      .attr('x1', '0%')
+      .attr('y1', '0%')
+      .attr('x2', '100%')
+      .attr('y2', '0%');
+      
+    linearGradient.selectAll('stop')
+      .data([
+        {offset: "0%", color: colorScale(0)},
+        {offset: "25%", color: colorScale(0.25)},
+        {offset: "50%", color: colorScale(0.5)},
+        {offset: "75%", color: colorScale(0.75)},
+        {offset: "100%", color: colorScale(1)}
+      ])
+      .join('stop')
+      .attr('offset', d => d.offset)
+      .attr('stop-color', d => d.color);
+      
+    svg.append('rect')
+      .attr('x', legendX)
+      .attr('y', legendY)
+      .attr('width', legendWidth)
+      .attr('height', legendHeight)
+      .style('fill', 'url(#similarity-gradient)');
+      
+    svg.append('text')
+      .attr('x', legendX)
+      .attr('y', legendY - 5)
+      .attr('fill', textColor)
+      .style('font-size', '12px')
+      .text('Similarity:');
+      
+    // Add legend ticks
+    const legendScale = d3.scaleLinear()
+      .domain([0, 1])
+      .range([legendX, legendX + legendWidth]);
+      
+    const legendAxis = d3.axisBottom(legendScale)
+      .tickValues([0, 0.25, 0.5, 0.75, 1])
+      .tickFormat(d3.format('.2f'));
+      
+    svg.append('g')
+      .attr('transform', `translate(0,${legendY + legendHeight})`)
+      .call(legendAxis)
+      .selectAll('text')
+        .attr('fill', textColor);
+  };
+
+  // Function to create similarity network visualization using D3 force-directed layout
+  const createSimilarityNetworkVisualization = () => {
+    if (!similarityMatrix || !validSmiles || !similarityNetworkRef.current) return;
+
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+    const backgroundColor = isDarkMode ? '#1f2937' : '#ffffff';
+    
+    const width = similarityNetworkRef.current.clientWidth;
+    const height = similarityNetworkRef.current.clientHeight;
+
+    // Get clustered data
+    const data = getClusteredData;
+    if (!data) return;
+    
+    // Clear previous visualization
+    d3.select(similarityNetworkRef.current).selectAll("*").remove();
+
+    // Create SVG
+    const svg = d3.select(similarityNetworkRef.current)
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+      
+    // Determine which molecules to show based on selected cluster
+    const clusterData = selectedCluster ? 
+      {
+        nodes: selectedCluster.members.map((m, i) => ({
+          id: m.index,
+          smiles: m.smiles,
+          properties: m.properties,
+          cluster: selectedCluster.id
+        })),
+        links: []
+      } : 
+      {
+        nodes: validSmiles.map((smiles, i) => {
+          // Find the cluster this molecule belongs to
+          const cluster = data.clusters.find(c => c.indices.includes(i));
+          return {
+            id: i,
+            smiles: smiles,
+            properties: leadsProperties[smiles]?.properties,
+            cluster: cluster ? cluster.id : -1
+          };
+        }),
+        links: []
+      };
+    
+    // Only include the first 100 nodes if too many
+    if (clusterData.nodes.length > 100) {
+      clusterData.nodes = clusterData.nodes.slice(0, 100);
+    }
+    
+    // Generate links based on similarity threshold
+    for (let i = 0; i < clusterData.nodes.length; i++) {
+      for (let j = i + 1; j < clusterData.nodes.length; j++) {
+        const node1 = clusterData.nodes[i];
+        const node2 = clusterData.nodes[j];
+        const similarity = similarityMatrix[node1.id][node2.id];
+        
+        // Only create links for molecules with similarity above threshold
+        if (similarity >= similarityCutoff) {
+          clusterData.links.push({
+            source: i,
+            target: j,
+            value: similarity
+          });
+        }
+      }
+    }
+    
+    // Color scale for clusters
+    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+    
+    // Create the force simulation
+    const simulation = d3.forceSimulation(clusterData.nodes)
+      .force("link", d3.forceLink(clusterData.links)
+        .id(d => d.id)
+        .distance(d => 120 * (1 - d.value)) // More similar = closer
+      )
+      .force("charge", d3.forceManyBody().strength(-150))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(20));
+      
+    // Create links
+    const link = svg.append("g")
+      .selectAll("line")
+      .data(clusterData.links)
+      .join("line")
+        .attr("stroke", "#999")
+        .attr("stroke-opacity", d => d.value)
+        .attr("stroke-width", d => Math.max(1, d.value * 3));
+        
+    // Create nodes
+    const node = svg.append("g")
+      .selectAll("circle")
+      .data(clusterData.nodes)
+      .join("circle")
+        .attr("r", d => d.properties?.QED ? 7 + (d.properties.QED * 5) : 10)
+        .attr("fill", d => colorScale(d.cluster))
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1.5)
+        .call(drag(simulation))
+        .on('mouseover', function(event, d) {
+          d3.select(this)
+            .attr('stroke', '#ff0000')
+            .attr('stroke-width', 2);
+            
+          // Show tooltip
+          const tooltip = d3.select(similarityNetworkRef.current)
+            .append('div')
+            .attr('class', 'tooltip')
+            .style('position', 'absolute')
+            .style('background-color', isDarkMode ? '#374151' : '#f3f4f6')
+            .style('color', textColor)
+            .style('padding', '5px')
+            .style('border-radius', '4px')
+            .style('font-size', '12px')
+            .style('pointer-events', 'none')
+            .style('z-index', 100)
+            .style('left', `${event.pageX - similarityNetworkRef.current.getBoundingClientRect().left + 10}px`)
+            .style('top', `${event.pageY - similarityNetworkRef.current.getBoundingClientRect().top - 28}px`);
+            
+          tooltip.html(`
+            <div>Cluster: ${d.cluster + 1}</div>
+            <div>SMILES: ${d.smiles.substring(0, 20)}...</div>
+            ${d.properties ? `
+              <div>MW: ${d.properties['Molecular Weight'].toFixed(1)}</div>
+              <div>LogP: ${d.properties['LogP'].toFixed(2)}</div>
+              <div>QED: ${d.properties['QED'].toFixed(2)}</div>
+            ` : ''}
+          `);
+        })
+        .on('mouseout', function() {
+          d3.select(this)
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 1.5);
+          d3.select(similarityNetworkRef.current).selectAll('.tooltip').remove();
+        })
+        .on('click', function(event, d) {
+          // Handle click - show molecule details
+          handleMoleculeSelect(d.smiles);
+        });
+        
+    // Add titles for tooltip (fallback for browsers that support it)
+    node.append("title")
+      .text(d => `Cluster ${d.cluster + 1}: ${d.smiles.substring(0, 20)}...`);
+    
+    // Create a drag behavior
+    function drag(simulation) {
+      function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+      }
+      
+      function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+      }
+      
+      function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+      }
+      
+      return d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
+    }
+    
+    // Update positions during simulation
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+        
+      node
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+    });
+    
+    // Add legend for clusters
+    const uniqueClusters = [...new Set(clusterData.nodes.map(d => d.cluster))].sort((a, b) => a - b);
+    
+    const legend = svg.append("g")
+      .attr("transform", `translate(20, 20)`);
+      
+    legend.selectAll("rect")
+      .data(uniqueClusters)
+      .join("rect")
+        .attr("x", 0)
+        .attr("y", (d, i) => i * 20)
+        .attr("width", 15)
+        .attr("height", 15)
+        .attr("fill", d => colorScale(d));
+        
+    legend.selectAll("text")
+      .data(uniqueClusters)
+      .join("text")
+        .attr("x", 20)
+        .attr("y", (d, i) => i * 20 + 12)
+        .text(d => `Cluster ${d + 1}`)
+        .attr("fill", textColor)
+        .style("font-size", "12px");
+        
+    // Add interaction instructions
+    svg.append("text")
+      .attr("x", width - 150)
+      .attr("y", height - 10)
+      .attr("fill", textColor)
+      .style("font-size", "10px")
+      .text("Drag nodes to adjust layout");
+    
+    // Stop simulation after 100 iterations to save CPU
+    setTimeout(() => {
+      simulation.stop();
+    }, 3000);
+  };
+
+  // Effect to trigger similarity calculation when the similarity view is activated
+  useEffect(() => {
+    if (activeView === 'similarity' && !similarityMatrix && !loadingSimilarity && leadData?.leads?.length > 0) {
+      calculateSimilarity();
+    }
+  }, [activeView, similarityMatrix, loadingSimilarity, leadData]);
+
   return (
     <div className="w-full">
       <div className="space-y-6">
@@ -2057,6 +2923,16 @@ const LigandDesign = ({ data, onNext, onBack }) => {
                   >
                     Summary
                   </button>
+                  <button
+                    onClick={() => setActiveView('similarity')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm focus:outline-none ${
+                      activeView === 'similarity'
+                        ? 'border-pharma-blue dark:border-pharma-teal text-pharma-blue dark:text-pharma-teal'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    Similarity
+                  </button>
                 </div>
               </div>
             )}
@@ -2112,6 +2988,11 @@ const LigandDesign = ({ data, onNext, onBack }) => {
               // Summary view 
               <div className="mt-4">
                 {renderSummaryView()}
+              </div>
+            ) : leadData.status === 'completed' && activeView === 'similarity' ? (
+              // Similarity view
+              <div className="mt-4">
+                {renderSimilarityView()}
               </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 italic">

@@ -21,6 +21,7 @@ export const endpoints = {
   leadStatusUrl: `${BaseUrl}/lead_identification/lead_status`,
   getMoleculePropertiesUrl: `${BaseUrl}/lead_identification/get_properties`,
   getBatchMoleculePropertiesUrl: `${BaseUrl}/lead_identification/get_batch_properties`,
+  calculateSimilarityUrl: `${BaseUrl}/lead_identification/calculate_similarity`,
   
   // PyMol Chat endpoints
   pymolChatStatusUrl: `${BaseUrl}/pymol_chat/status`,
