@@ -2381,169 +2381,344 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     const data = getClusteredData;
     if (!data) return;
     
-    // Create color scale
-    const colorScale = d3.scaleSequential()
-      .domain([0, 1])
-      .interpolator(d3.interpolateViridis);
-
-    // Create SVG
+    // Clear previous visualization
+    d3.select(similarityMatrixRef.current).selectAll("*").remove();
+    
+    // Create controls panel for the matrix
+    const controlsDiv = d3.select(similarityMatrixRef.current)
+      .append("div")
+      .attr("class", "matrix-controls")
+      .style("position", "absolute")
+      .style("bottom", "10px")
+      .style("left", "50%")
+      .style("transform", "translateX(-50%)")
+      .style("z-index", "10")
+      .style("background-color", isDarkMode ? "rgba(31, 41, 55, 0.8)" : "rgba(255, 255, 255, 0.8)")
+      .style("padding", "10px")
+      .style("border-radius", "4px")
+      .style("box-shadow", "0 2px 5px rgba(0,0,0,0.2)")
+      .style("display", "flex")
+      .style("gap", "10px")
+      .style("align-items", "center");
+    
+    // Add matrix size control
+    controlsDiv.append("span")
+      .style("color", textColor)
+      .style("font-size", "12px")
+      .text("Display size:");
+    
+    // Create dropdown for matrix size
+    const matrixSizeValues = [10, 20, 50, 100, "All"];
+    const matrixSizeSelect = controlsDiv.append("select")
+      .style("background-color", isDarkMode ? "#374151" : "#f9fafb")
+      .style("color", textColor)
+      .style("border", "1px solid " + (isDarkMode ? "#6b7280" : "#d1d5db"))
+      .style("border-radius", "4px")
+      .style("padding", "3px 6px")
+      .style("font-size", "12px");
+      
+    matrixSizeSelect.selectAll("option")
+      .data(matrixSizeValues)
+      .enter()
+      .append("option")
+      .attr("value", d => d)
+      .text(d => typeof d === "number" ? `${d} molecules` : d);
+      
+    // Set initial size based on number of molecules
+    const initialSize = validSmiles.length <= 20 ? "All" : 
+                     validSmiles.length <= 50 ? 50 : 
+                     validSmiles.length <= 100 ? 100 : 50;
+    
+    matrixSizeSelect.property("value", initialSize);
+    
+    // Create SVG with zoom capabilities
     const svg = d3.select(similarityMatrixRef.current)
       .append("svg")
       .attr("width", width)
-      .attr("height", height);
-
-    // Determine which molecules to show based on selected cluster
-    let indices = [];
-    let molecules = [];
+      .attr("height", height)
+      .attr("viewBox", [0, 0, width, height])
+      .attr("style", "max-width: 100%; height: auto;");
     
-    if (selectedCluster) {
-      indices = selectedCluster.indices;
-      molecules = selectedCluster.members.map(m => m.smiles);
-    } else {
-      indices = [...Array(validSmiles.length).keys()];
-      molecules = validSmiles;
-    }
+    // Add zoom behavior for the matrix
+    const g = svg.append("g");
     
-    // Limit to a reasonable number to avoid crowding
-    const maxDisplay = 50;
-    if (indices.length > maxDisplay) {
-      indices = indices.slice(0, maxDisplay);
-      molecules = molecules.slice(0, maxDisplay);
-    }
-    
-    // Create scales
-    const xScale = d3.scaleBand()
-      .domain(indices.map(i => i))
-      .range([padding.left, width - padding.right])
-      .padding(0.05);
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 10]) // Allow zoom from 0.5x to 10x
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
       
-    const yScale = d3.scaleBand()
-      .domain(indices.map(i => i))
-      .range([padding.top, height - padding.bottom])
-      .padding(0.05);
+    svg.call(zoom);
     
-    // Create cells
-    const cells = svg.selectAll('rect')
-      .data(indices.flatMap(i => indices.map(j => ({
-        row: i,
-        col: j,
-        value: similarityMatrix[i][j]
-      }))))
-      .join('rect')
-        .attr('x', d => xScale(d.col))
-        .attr('y', d => yScale(d.row))
-        .attr('width', xScale.bandwidth())
-        .attr('height', yScale.bandwidth())
-        .attr('fill', d => colorScale(d.value))
-        .attr('stroke', 'none')
-        .on('mouseover', function(event, d) {
-          d3.select(this).attr('stroke', '#ff0000').attr('stroke-width', 2);
-          
-          // Show tooltip
-          const tooltip = d3.select(similarityMatrixRef.current)
-            .append('div')
-            .attr('class', 'tooltip')
-            .style('position', 'absolute')
-            .style('background-color', isDarkMode ? '#374151' : '#f3f4f6')
-            .style('color', textColor)
-            .style('padding', '5px')
-            .style('border-radius', '4px')
-            .style('font-size', '12px')
-            .style('pointer-events', 'none')
-            .style('z-index', 100)
-            .style('left', `${event.pageX - similarityMatrixRef.current.getBoundingClientRect().left + 10}px`)
-            .style('top', `${event.pageY - similarityMatrixRef.current.getBoundingClientRect().top - 28}px`);
-            
-          tooltip.html(`
-            <div>Similarity: ${d.value.toFixed(2)}</div>
-            <div>Molecule 1: ${validSmiles[d.row].substring(0, 20)}...</div>
-            <div>Molecule 2: ${validSmiles[d.col].substring(0, 20)}...</div>
-          `);
-        })
-        .on('mouseout', function() {
-          d3.select(this).attr('stroke', 'none');
-          d3.select(similarityMatrixRef.current).selectAll('.tooltip').remove();
-        });
+    // Add zoom controls
+    const zoomControls = svg.append("g")
+      .attr("transform", `translate(${width - 80}, 20)`)
+      .attr("class", "zoom-controls");
+      
+    // Zoom in button
+    zoomControls.append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", 30)
+      .attr("height", 30)
+      .attr("fill", isDarkMode ? "#374151" : "#f3f4f6")
+      .attr("stroke", isDarkMode ? "#6b7280" : "#d1d5db")
+      .attr("rx", 4)
+      .style("cursor", "pointer")
+      .on("click", () => {
+        svg.transition().duration(300).call(zoom.scaleBy, 1.5);
+      });
+      
+    zoomControls.append("text")
+      .attr("x", 15)
+      .attr("y", 20)
+      .attr("text-anchor", "middle")
+      .attr("fill", textColor)
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .style("pointer-events", "none")
+      .text("+");
+      
+    // Zoom out button
+    zoomControls.append("rect")
+      .attr("x", 0)
+      .attr("y", 35)
+      .attr("width", 30)
+      .attr("height", 30)
+      .attr("fill", isDarkMode ? "#374151" : "#f3f4f6")
+      .attr("stroke", isDarkMode ? "#6b7280" : "#d1d5db")
+      .attr("rx", 4)
+      .style("cursor", "pointer")
+      .on("click", () => {
+        svg.transition().duration(300).call(zoom.scaleBy, 0.75);
+      });
+      
+    zoomControls.append("text")
+      .attr("x", 15)
+      .attr("y", 55)
+      .attr("text-anchor", "middle")
+      .attr("fill", textColor)
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .style("pointer-events", "none")
+      .text("−");
+      
+    // Reset zoom button
+    zoomControls.append("rect")
+      .attr("x", 0)
+      .attr("y", 70)
+      .attr("width", 30)
+      .attr("height", 30)
+      .attr("fill", isDarkMode ? "#374151" : "#f3f4f6")
+      .attr("stroke", isDarkMode ? "#6b7280" : "#d1d5db")
+      .attr("rx", 4)
+      .style("cursor", "pointer")
+      .on("click", () => {
+        svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+      });
+      
+    zoomControls.append("text")
+      .attr("x", 15)
+      .attr("y", 91)
+      .attr("text-anchor", "middle")
+      .attr("fill", textColor)
+      .style("font-size", "10px")
+      .style("pointer-events", "none")
+      .text("Reset");
+    
+    // Function to render matrix with specified limit
+    const renderMatrix = (sizeLimit) => {
+      // Clear previous grid
+      g.selectAll("*").remove();
+      
+      // Create color scale
+      const colorScale = d3.scaleSequential()
+        .domain([0, 1])
+        .interpolator(d3.interpolateViridis);
+      
+      // Determine which molecules to show based on selected cluster and size limit
+      let indices = [];
+      let molecules = [];
+      
+      if (selectedCluster) {
+        indices = selectedCluster.indices;
+        molecules = selectedCluster.members.map(m => m.smiles);
+      } else {
+        indices = [...Array(validSmiles.length).keys()];
+        molecules = validSmiles;
+      }
+      
+      // Limit to specified size if not "All"
+      if (sizeLimit !== "All" && indices.length > sizeLimit) {
+        indices = indices.slice(0, sizeLimit);
+        molecules = molecules.slice(0, sizeLimit);
+      }
+      
+      // Create scales
+      const xScale = d3.scaleBand()
+        .domain(indices.map(i => i))
+        .range([padding.left, width - padding.right])
+        .padding(0.05);
         
-    // Add axes labels if not too many molecules
-    if (indices.length <= 20) {
-      // X axis
+      const yScale = d3.scaleBand()
+        .domain(indices.map(i => i))
+        .range([padding.top, height - padding.bottom])
+        .padding(0.05);
+      
+      // Create cells
+      const cells = g.selectAll('rect')
+        .data(indices.flatMap(i => indices.map(j => ({
+          row: i,
+          col: j,
+          value: similarityMatrix[i][j]
+        }))))
+        .join('rect')
+          .attr('x', d => xScale(d.col))
+          .attr('y', d => yScale(d.row))
+          .attr('width', xScale.bandwidth())
+          .attr('height', yScale.bandwidth())
+          .attr('fill', d => colorScale(d.value))
+          .attr('stroke', 'none')
+          .on('mouseover', function(event, d) {
+            d3.select(this).attr('stroke', '#ff0000').attr('stroke-width', 2);
+            
+            // Show tooltip
+            const tooltip = d3.select(similarityMatrixRef.current)
+              .append('div')
+              .attr('class', 'tooltip')
+              .style('position', 'absolute')
+              .style('background-color', isDarkMode ? '#374151' : '#f3f4f6')
+              .style('color', textColor)
+              .style('padding', '5px')
+              .style('border-radius', '4px')
+              .style('font-size', '12px')
+              .style('pointer-events', 'none')
+              .style('z-index', 100)
+              .style('left', `${event.pageX - similarityMatrixRef.current.getBoundingClientRect().left + 10}px`)
+              .style('top', `${event.pageY - similarityMatrixRef.current.getBoundingClientRect().top - 28}px`);
+              
+            tooltip.html(`
+              <div>Similarity: ${d.value.toFixed(2)}</div>
+              <div>Molecule 1: ${validSmiles[d.row].substring(0, 20)}...</div>
+              <div>Molecule 2: ${validSmiles[d.col].substring(0, 20)}...</div>
+            `);
+          })
+          .on('mouseout', function() {
+            d3.select(this).attr('stroke', 'none');
+            d3.select(similarityMatrixRef.current).selectAll('.tooltip').remove();
+          })
+          .on('click', function(event, d) {
+            // On cell click, show molecule details for one of the molecules
+            if (d.row !== d.col) { // Don't do anything for diagonal cells (same molecule)
+              handleMoleculeSelect(validSmiles[d.row]);
+            }
+          });
+          
+      // Add axes labels if not too many molecules
+      if (indices.length <= 50) {
+        // X axis
+        g.append('g')
+          .attr('transform', `translate(0,${padding.top - 5})`)
+          .call(d3.axisTop(xScale)
+            .tickFormat(i => {
+              // For fewer molecules, show more detailed labels
+              if (indices.length <= 20) {
+                return i + 1;
+              } else {
+                // For more molecules, show fewer labels
+                return (i % 5 === 0) ? i + 1 : '';
+              }
+            })
+          )
+          .selectAll('text')
+            .attr('fill', textColor)
+            .attr('transform', indices.length <= 20 ? 'rotate(-45)' : 'rotate(0)')
+            .style('text-anchor', indices.length <= 20 ? 'start' : 'middle')
+            .style('font-size', indices.length <= 20 ? '10px' : '8px');
+    
+        // Y axis
+        g.append('g')
+          .attr('transform', `translate(${padding.left - 5},0)`)
+          .call(d3.axisLeft(yScale)
+            .tickFormat(i => {
+              if (indices.length <= 20) {
+                return i + 1;
+              } else {
+                return (i % 5 === 0) ? i + 1 : '';
+              }
+            })
+          )
+          .selectAll('text')
+            .attr('fill', textColor)
+            .style('font-size', indices.length <= 20 ? '10px' : '8px');
+      }
+      
+      // Add color legend
+      const legendWidth = 200;
+      const legendHeight = 20;
+      
+      const legendX = width - legendWidth - padding.right;
+      const legendY = 20;
+      
+      const defs = svg.append('defs');
+      
+      const linearGradient = defs.append('linearGradient')
+        .attr('id', 'similarity-gradient')
+        .attr('x1', '0%')
+        .attr('y1', '0%')
+        .attr('x2', '100%')
+        .attr('y2', '0%');
+        
+      linearGradient.selectAll('stop')
+        .data([
+          {offset: "0%", color: colorScale(0)},
+          {offset: "25%", color: colorScale(0.25)},
+          {offset: "50%", color: colorScale(0.5)},
+          {offset: "75%", color: colorScale(0.75)},
+          {offset: "100%", color: colorScale(1)}
+        ])
+        .join('stop')
+        .attr('offset', d => d.offset)
+        .attr('stop-color', d => d.color);
+        
+      svg.append('rect')
+        .attr('x', legendX)
+        .attr('y', legendY)
+        .attr('width', legendWidth)
+        .attr('height', legendHeight)
+        .style('fill', 'url(#similarity-gradient)');
+        
+      svg.append('text')
+        .attr('x', legendX)
+        .attr('y', legendY - 5)
+        .attr('fill', textColor)
+        .style('font-size', '12px')
+        .text('Similarity:');
+        
+      // Add legend ticks
+      const legendScale = d3.scaleLinear()
+        .domain([0, 1])
+        .range([legendX, legendX + legendWidth]);
+        
+      const legendAxis = d3.axisBottom(legendScale)
+        .tickValues([0, 0.25, 0.5, 0.75, 1])
+        .tickFormat(d3.format('.2f'));
+        
       svg.append('g')
-        .attr('transform', `translate(0,${padding.top - 5})`)
-        .call(d3.axisTop(xScale)
-          .tickFormat(i => (i + 1))
-        )
-        .selectAll('text')
-          .attr('fill', textColor)
-          .attr('transform', 'rotate(-45)')
-          .style('text-anchor', 'start');
-
-      // Y axis
-      svg.append('g')
-        .attr('transform', `translate(${padding.left - 5},0)`)
-        .call(d3.axisLeft(yScale)
-          .tickFormat(i => (i + 1))
-        )
+        .attr('transform', `translate(0,${legendY + legendHeight})`)
+        .call(legendAxis)
         .selectAll('text')
           .attr('fill', textColor);
-    }
+    };
     
-    // Add color legend
-    const legendWidth = 200;
-    const legendHeight = 20;
+    // Initial render
+    renderMatrix(matrixSizeSelect.property("value"));
     
-    const legendX = width - legendWidth - padding.right;
-    const legendY = 20;
-    
-    const defs = svg.append('defs');
-    
-    const linearGradient = defs.append('linearGradient')
-      .attr('id', 'similarity-gradient')
-      .attr('x1', '0%')
-      .attr('y1', '0%')
-      .attr('x2', '100%')
-      .attr('y2', '0%');
-      
-    linearGradient.selectAll('stop')
-      .data([
-        {offset: "0%", color: colorScale(0)},
-        {offset: "25%", color: colorScale(0.25)},
-        {offset: "50%", color: colorScale(0.5)},
-        {offset: "75%", color: colorScale(0.75)},
-        {offset: "100%", color: colorScale(1)}
-      ])
-      .join('stop')
-      .attr('offset', d => d.offset)
-      .attr('stop-color', d => d.color);
-      
-    svg.append('rect')
-      .attr('x', legendX)
-      .attr('y', legendY)
-      .attr('width', legendWidth)
-      .attr('height', legendHeight)
-      .style('fill', 'url(#similarity-gradient)');
-      
-    svg.append('text')
-      .attr('x', legendX)
-      .attr('y', legendY - 5)
-      .attr('fill', textColor)
-      .style('font-size', '12px')
-      .text('Similarity:');
-      
-    // Add legend ticks
-    const legendScale = d3.scaleLinear()
-      .domain([0, 1])
-      .range([legendX, legendX + legendWidth]);
-      
-    const legendAxis = d3.axisBottom(legendScale)
-      .tickValues([0, 0.25, 0.5, 0.75, 1])
-      .tickFormat(d3.format('.2f'));
-      
-    svg.append('g')
-      .attr('transform', `translate(0,${legendY + legendHeight})`)
-      .call(legendAxis)
-      .selectAll('text')
-        .attr('fill', textColor);
+    // Update matrix when the size selector changes
+    matrixSizeSelect.on("change", function() {
+      renderMatrix(this.value);
+      svg.call(zoom.transform, d3.zoomIdentity); // Reset zoom
+    });
   };
 
   // Function to create similarity network visualization using D3 force-directed layout
@@ -2564,11 +2739,100 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     // Clear previous visualization
     d3.select(similarityNetworkRef.current).selectAll("*").remove();
 
-    // Create SVG
+    // Create SVG with zoom capabilities
     const svg = d3.select(similarityNetworkRef.current)
       .append("svg")
       .attr("width", width)
-      .attr("height", height);
+      .attr("height", height)
+      .attr("viewBox", [0, 0, width, height])
+      .attr("style", "max-width: 100%; height: auto;");
+  
+    // Add zoom behavior
+    const g = svg.append("g");
+    
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 4]) // Allow zoom from 0.1x to 4x
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+      
+    svg.call(zoom);
+    
+    // Add zoom controls
+    const zoomControls = svg.append("g")
+      .attr("transform", `translate(${width - 80}, 20)`)
+      .attr("class", "zoom-controls");
+      
+    // Zoom in button
+    zoomControls.append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", 30)
+      .attr("height", 30)
+      .attr("fill", isDarkMode ? "#374151" : "#f3f4f6")
+      .attr("stroke", isDarkMode ? "#6b7280" : "#d1d5db")
+      .attr("rx", 4)
+      .style("cursor", "pointer")
+      .on("click", () => {
+        svg.transition().duration(300).call(zoom.scaleBy, 1.5);
+      });
+      
+    zoomControls.append("text")
+      .attr("x", 15)
+      .attr("y", 20)
+      .attr("text-anchor", "middle")
+      .attr("fill", textColor)
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .style("pointer-events", "none")
+      .text("+");
+      
+    // Zoom out button
+    zoomControls.append("rect")
+      .attr("x", 0)
+      .attr("y", 35)
+      .attr("width", 30)
+      .attr("height", 30)
+      .attr("fill", isDarkMode ? "#374151" : "#f3f4f6")
+      .attr("stroke", isDarkMode ? "#6b7280" : "#d1d5db")
+      .attr("rx", 4)
+      .style("cursor", "pointer")
+      .on("click", () => {
+        svg.transition().duration(300).call(zoom.scaleBy, 0.75);
+      });
+      
+    zoomControls.append("text")
+      .attr("x", 15)
+      .attr("y", 55)
+      .attr("text-anchor", "middle")
+      .attr("fill", textColor)
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .style("pointer-events", "none")
+      .text("−");
+      
+    // Reset zoom button
+    zoomControls.append("rect")
+      .attr("x", 0)
+      .attr("y", 70)
+      .attr("width", 30)
+      .attr("height", 30)
+      .attr("fill", isDarkMode ? "#374151" : "#f3f4f6")
+      .attr("stroke", isDarkMode ? "#6b7280" : "#d1d5db")
+      .attr("rx", 4)
+      .style("cursor", "pointer")
+      .on("click", () => {
+        svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+      });
+      
+    zoomControls.append("text")
+      .attr("x", 15)
+      .attr("y", 91)
+      .attr("text-anchor", "middle")
+      .attr("fill", textColor)
+      .style("font-size", "10px")
+      .style("pointer-events", "none")
+      .text("Reset");
       
     // Determine which molecules to show based on selected cluster
     const clusterData = selectedCluster ? 
@@ -2621,18 +2885,21 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     // Color scale for clusters
     const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
     
-    // Create the force simulation
+    // Automatically calculate a good initial zoom level based on node count
+    const optimalZoomLevel = Math.max(0.5, Math.min(1, 15 / Math.sqrt(clusterData.nodes.length)));
+    
+    // Create the force simulation with more spread out nodes
     const simulation = d3.forceSimulation(clusterData.nodes)
       .force("link", d3.forceLink(clusterData.links)
         .id(d => d.id)
-        .distance(d => 120 * (1 - d.value)) // More similar = closer
+        .distance(d => 200 * (1 - d.value)) // More similar = closer, but with more distance overall
       )
-      .force("charge", d3.forceManyBody().strength(-150))
+      .force("charge", d3.forceManyBody().strength(-200)) // Stronger repulsion
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(20));
+      .force("collision", d3.forceCollide().radius(25)); // Larger collision radius
       
     // Create links
-    const link = svg.append("g")
+    const link = g.append("g")
       .selectAll("line")
       .data(clusterData.links)
       .join("line")
@@ -2641,7 +2908,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
         .attr("stroke-width", d => Math.max(1, d.value * 3));
         
     // Create nodes
-    const node = svg.append("g")
+    const node = g.append("g")
       .selectAll("circle")
       .data(clusterData.nodes)
       .join("circle")
@@ -2737,7 +3004,8 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     const uniqueClusters = [...new Set(clusterData.nodes.map(d => d.cluster))].sort((a, b) => a - b);
     
     const legend = svg.append("g")
-      .attr("transform", `translate(20, 20)`);
+      .attr("transform", `translate(20, 20)`)
+      .style("pointer-events", "none"); // Prevent legend from interfering with pan/zoom
       
     legend.selectAll("rect")
       .data(uniqueClusters)
@@ -2759,16 +3027,27 @@ const LigandDesign = ({ data, onNext, onBack }) => {
         
     // Add interaction instructions
     svg.append("text")
-      .attr("x", width - 150)
+      .attr("x", 20)
       .attr("y", height - 10)
       .attr("fill", textColor)
-      .style("font-size", "10px")
-      .text("Drag nodes to adjust layout");
+      .style("font-size", "12px")
+      .style("pointer-events", "none")
+      .text("Drag to move nodes | Scroll to zoom | Use buttons to adjust view");
     
-    // Stop simulation after 100 iterations to save CPU
+    // Apply initial zoom to show all nodes
     setTimeout(() => {
-      simulation.stop();
-    }, 3000);
+      svg.call(zoom.transform, d3.zoomIdentity.scale(optimalZoomLevel));
+    }, 300);
+    
+    // Add small delay before stopping simulation to let nodes spread out more
+    setTimeout(() => {
+      simulation.alphaTarget(0.01).restart(); // Lower alpha target for gentler simulation
+      
+      // Stop simulation after some time to save CPU
+      setTimeout(() => {
+        simulation.stop();
+      }, 5000);
+    }, 100);
   };
 
   // Effect to trigger similarity calculation when the similarity view is activated
