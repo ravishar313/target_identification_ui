@@ -2375,7 +2375,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     
     const width = similarityMatrixRef.current.clientWidth;
     const height = similarityMatrixRef.current.clientHeight;
-    const padding = { top: 50, right: 20, bottom: 20, left: 50 };
+    const padding = { top: 50, right: 20, bottom: 80, left: 50 };
 
     // Get clustered data for visualization
     const data = getClusteredData;
@@ -2384,14 +2384,13 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     // Clear previous visualization
     d3.select(similarityMatrixRef.current).selectAll("*").remove();
     
-    // Create controls panel for the matrix
+    // Create controls panel for the matrix (moved to top right)
     const controlsDiv = d3.select(similarityMatrixRef.current)
       .append("div")
       .attr("class", "matrix-controls")
       .style("position", "absolute")
-      .style("bottom", "10px")
-      .style("left", "50%")
-      .style("transform", "translateX(-50%)")
+      .style("top", "10px")
+      .style("right", "10px")
       .style("z-index", "10")
       .style("background-color", isDarkMode ? "rgba(31, 41, 55, 0.8)" : "rgba(255, 255, 255, 0.8)")
       .style("padding", "10px")
@@ -2450,11 +2449,12 @@ const LigandDesign = ({ data, onNext, onBack }) => {
       
     svg.call(zoom);
     
-    // Add zoom controls
+    // Add zoom controls - keep on left side
     const zoomControls = svg.append("g")
-      .attr("transform", `translate(${width - 80}, 20)`)
-      .attr("class", "zoom-controls");
-      
+      .attr("transform", `translate(20, 20)`)
+      .attr("class", "zoom-controls")
+      .style("pointer-events", "all");
+    
     // Zoom in button
     zoomControls.append("rect")
       .attr("x", 0)
@@ -2468,7 +2468,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
       .on("click", () => {
         svg.transition().duration(300).call(zoom.scaleBy, 1.5);
       });
-      
+    
     zoomControls.append("text")
       .attr("x", 15)
       .attr("y", 20)
@@ -2478,7 +2478,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
       .style("font-weight", "bold")
       .style("pointer-events", "none")
       .text("+");
-      
+    
     // Zoom out button
     zoomControls.append("rect")
       .attr("x", 0)
@@ -2492,7 +2492,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
       .on("click", () => {
         svg.transition().duration(300).call(zoom.scaleBy, 0.75);
       });
-      
+    
     zoomControls.append("text")
       .attr("x", 15)
       .attr("y", 55)
@@ -2502,7 +2502,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
       .style("font-weight", "bold")
       .style("pointer-events", "none")
       .text("−");
-      
+    
     // Reset zoom button
     zoomControls.append("rect")
       .attr("x", 0)
@@ -2516,10 +2516,10 @@ const LigandDesign = ({ data, onNext, onBack }) => {
       .on("click", () => {
         svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
       });
-      
+    
     zoomControls.append("text")
       .attr("x", 15)
-      .attr("y", 91)
+      .attr("y", 85)
       .attr("text-anchor", "middle")
       .attr("fill", textColor)
       .style("font-size", "10px")
@@ -2608,9 +2608,9 @@ const LigandDesign = ({ data, onNext, onBack }) => {
             d3.select(similarityMatrixRef.current).selectAll('.tooltip').remove();
           })
           .on('click', function(event, d) {
-            // On cell click, show molecule details for one of the molecules
-            if (d.row !== d.col) { // Don't do anything for diagonal cells (same molecule)
-              handleMoleculeSelect(validSmiles[d.row]);
+            // Only show comparison for different molecules
+            if (d.row !== d.col) {
+              showMoleculeComparison(validSmiles[d.row], validSmiles[d.col], d.value);
             }
           });
           
@@ -2653,12 +2653,12 @@ const LigandDesign = ({ data, onNext, onBack }) => {
             .style('font-size', indices.length <= 20 ? '10px' : '8px');
       }
       
-      // Add color legend
+      // Add color legend - moved to bottom right corner
       const legendWidth = 200;
       const legendHeight = 20;
       
-      const legendX = width - legendWidth - padding.right;
-      const legendY = 20;
+      const legendX = width - legendWidth - 20;
+      const legendY = height - 40;
       
       const defs = svg.append('defs');
       
@@ -2680,30 +2680,39 @@ const LigandDesign = ({ data, onNext, onBack }) => {
         .join('stop')
         .attr('offset', d => d.offset)
         .attr('stop-color', d => d.color);
-        
+      
+      // Create a background for the legend to improve readability
+      svg.append('rect')
+        .attr('x', legendX - 10)
+        .attr('y', legendY - 15)
+        .attr('width', legendWidth + 20)
+        .attr('height', 55)
+        .attr('fill', isDarkMode ? 'rgba(31, 41, 55, 0.7)' : 'rgba(255, 255, 255, 0.7)')
+        .attr('rx', 4);
+      
       svg.append('rect')
         .attr('x', legendX)
         .attr('y', legendY)
         .attr('width', legendWidth)
         .attr('height', legendHeight)
         .style('fill', 'url(#similarity-gradient)');
-        
+      
       svg.append('text')
         .attr('x', legendX)
         .attr('y', legendY - 5)
         .attr('fill', textColor)
         .style('font-size', '12px')
         .text('Similarity:');
-        
+      
       // Add legend ticks
       const legendScale = d3.scaleLinear()
         .domain([0, 1])
         .range([legendX, legendX + legendWidth]);
-        
+      
       const legendAxis = d3.axisBottom(legendScale)
         .tickValues([0, 0.25, 0.5, 0.75, 1])
         .tickFormat(d3.format('.2f'));
-        
+      
       svg.append('g')
         .attr('transform', `translate(0,${legendY + legendHeight})`)
         .call(legendAxis)
@@ -2718,6 +2727,158 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     matrixSizeSelect.on("change", function() {
       renderMatrix(this.value);
       svg.call(zoom.transform, d3.zoomIdentity); // Reset zoom
+    });
+  };
+
+  // Function to show a side-by-side comparison of two molecules
+  const showMoleculeComparison = async (smiles1, smiles2, similarityScore) => {
+    // Fetch properties for both molecules if not already cached
+    const fetchProps = async (smiles) => {
+      if (leadsProperties[smiles]) {
+        return leadsProperties[smiles];
+      }
+      
+      setLoadingProperties(true);
+      try {
+        const responseData = await fetchMoleculePropertiesData(smiles);
+        
+        // Update the cache
+        setLeadsProperties(prev => ({
+          ...prev,
+          [smiles]: responseData
+        }));
+        
+        return responseData;
+      } catch (error) {
+        console.error('Error fetching molecule properties:', error);
+        return null;
+      } finally {
+        setLoadingProperties(false);
+      }
+    };
+    
+    // Fetch properties for both molecules in parallel
+    const [molecule1Props, molecule2Props] = await Promise.all([
+      fetchProps(smiles1),
+      fetchProps(smiles2)
+    ]);
+    
+    // Create and show the comparison modal
+    const comparisonModal = document.createElement('div');
+    comparisonModal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    comparisonModal.style.zIndex = 1000;
+    
+    // Format property display for a single molecule
+    const formatPropertySection = (props, title) => {
+      if (!props) return `<div class="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded">Error loading properties</div>`;
+      
+      return `
+        <div class="p-4">
+          <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-3">${title}</h4>
+          <div class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow mb-4">
+            <div class="flex justify-center bg-gray-50 dark:bg-gray-800 p-2 rounded mb-3 h-32 items-center">
+              <img src="${props.properties['Molecule Image (base64)']}" alt="Molecular Structure" class="max-h-full">
+            </div>
+            <div class="text-xs font-mono text-gray-600 dark:text-gray-300 mb-3 truncate">${props.smiles}</div>
+          </div>
+          
+          <div class="space-y-2 bg-white dark:bg-gray-700 p-4 rounded-lg shadow">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Molecular Formula</div>
+              <div class="text-sm text-gray-900 dark:text-gray-200">${props.properties['Molecular Formula']}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Molecular Weight</div>
+              <div class="text-sm text-gray-900 dark:text-gray-200">${props.properties['Molecular Weight'].toFixed(2)} Da</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400">LogP</div>
+              <div class="text-sm text-gray-900 dark:text-gray-200">${props.properties['LogP'].toFixed(2)}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Solubility (LogS)</div>
+              <div class="text-sm text-gray-900 dark:text-gray-200">${props.properties['LogS (Solubility)'].toFixed(2)}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400">QED</div>
+              <div class="text-sm text-gray-900 dark:text-gray-200">${props.properties['QED'].toFixed(2)}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400">H-Bond Donors</div>
+              <div class="text-sm text-gray-900 dark:text-gray-200">${props.properties['H-Bond Donors']}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="text-sm font-medium text-gray-500 dark:text-gray-400">H-Bond Acceptors</div>
+              <div class="text-sm text-gray-900 dark:text-gray-200">${props.properties['H-Bond Acceptors']}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+    
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    
+    comparisonModal.innerHTML = `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+            Molecule Comparison (Similarity: ${similarityScore.toFixed(2)})
+          </h3>
+          <button id="close-comparison" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        ${loadingProperties ? `
+          <div class="flex justify-center items-center p-8">
+            <svg class="animate-spin h-8 w-8 text-pharma-blue dark:text-pharma-teal" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="ml-2 text-gray-600 dark:text-gray-300">Loading molecule properties...</span>
+          </div>
+        ` : `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${formatPropertySection(molecule1Props, "Molecule 1")}
+            ${formatPropertySection(molecule2Props, "Molecule 2")}
+          </div>
+        `}
+        
+        <div class="flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
+          <button id="view-molecule-1" class="mr-2 px-4 py-2 bg-pharma-blue dark:bg-pharma-teal text-white rounded hover:bg-pharma-blue-dark dark:hover:bg-pharma-teal-dark">
+            View Molecule 1
+          </button>
+          <button id="view-molecule-2" class="mr-2 px-4 py-2 bg-pharma-blue dark:bg-pharma-teal text-white rounded hover:bg-pharma-blue-dark dark:hover:bg-pharma-teal-dark">
+            View Molecule 2
+          </button>
+          <button id="close-comparison-btn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+            Close
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(comparisonModal);
+    
+    // Add event listeners
+    document.getElementById('close-comparison').addEventListener('click', () => {
+      document.body.removeChild(comparisonModal);
+    });
+    
+    document.getElementById('close-comparison-btn').addEventListener('click', () => {
+      document.body.removeChild(comparisonModal);
+    });
+    
+    document.getElementById('view-molecule-1').addEventListener('click', () => {
+      document.body.removeChild(comparisonModal);
+      handleMoleculeSelect(smiles1);
+    });
+    
+    document.getElementById('view-molecule-2').addEventListener('click', () => {
+      document.body.removeChild(comparisonModal);
+      handleMoleculeSelect(smiles2);
     });
   };
 
