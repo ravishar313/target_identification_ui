@@ -305,26 +305,71 @@ const ServiceDetails = ({ jobId, onClose }) => {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Result Files</h3>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <p className="font-medium text-gray-900 dark:text-white mb-2">Download Result:</p>
-                  <button 
-                    onClick={() => handleDownload(job.result_path)}
-                    disabled={downloading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    {downloading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Downloading...
-                      </>
-                    ) : (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                        Download File
-                      </>
-                    )}
-                  </button>
+                  {/* Special rendering for DrugFlow in overview */}
+                  {job.service_type === 'drugflow' && job.result_data && job.result_data.output_files ? (
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white mb-2">DrugFlow Results:</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        Download all generated molecules and analysis files
+                      </p>
+                      <button 
+                        onClick={() => {
+                          // Download all three files sequentially
+                          const downloadAll = async () => {
+                            try {
+                              setDownloading(true);
+                              await handleDownload(job.result_data.output_files.generated, 'generated_molecules.sdf');
+                              await handleDownload(job.result_data.output_files.postproc_detailed, 'metrics_detailed.csv');
+                              await handleDownload(job.result_data.output_files.postproc_aggregated, 'metrics_aggregated.csv');
+                            } finally {
+                              setDownloading(false);
+                            }
+                          };
+                          downloadAll();
+                        }}
+                        disabled={downloading}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      >
+                        {downloading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Downloading Files...
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                            Download All Files
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    // Default download button for other services
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white mb-2">Download Result:</p>
+                      <button 
+                        onClick={() => handleDownload(job.result_path)}
+                        disabled={downloading}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      >
+                        {downloading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                            Download File
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -543,6 +588,139 @@ const ServiceDetails = ({ jobId, onClose }) => {
               </div>
             )}
             
+            {/* Special rendering for DrugFlow results */}
+            {job.service_type === 'drugflow' && job.result_data.output_files && (
+              <div className="mb-6">
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-3">DrugFlow Results</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Generated molecules and analysis metrics for the protein-ligand pair.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Generated Molecules */}
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
+                        <h5 className="font-medium text-gray-800 dark:text-white mb-2">Generated Molecules</h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          SDF file containing the generated molecular structures
+                        </p>
+                        <button 
+                          onClick={() => handleDownload(job.result_data.output_files.generated, 'generated_molecules.sdf')}
+                          disabled={downloading}
+                          className="w-full inline-flex justify-center items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                        >
+                          {downloading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                              Download SDF
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      
+                      {/* Metrics Detailed */}
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
+                        <h5 className="font-medium text-gray-800 dark:text-white mb-2">Metrics Detailed</h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          Detailed metrics for each generated molecule
+                        </p>
+                        <button 
+                          onClick={() => handleDownload(job.result_data.output_files.postproc_detailed, 'metrics_detailed.csv')}
+                          disabled={downloading}
+                          className="w-full inline-flex justify-center items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                        >
+                          {downloading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                              Download CSV
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      
+                      {/* Metrics Aggregated */}
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
+                        <h5 className="font-medium text-gray-800 dark:text-white mb-2">Metrics Aggregated</h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          Aggregated metrics for all generated molecules
+                        </p>
+                        <button 
+                          onClick={() => handleDownload(job.result_data.output_files.postproc_aggregated, 'metrics_aggregated.csv')}
+                          disabled={downloading}
+                          className="w-full inline-flex justify-center items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                        >
+                          {downloading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                              Download CSV
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Download All Button */}
+                    <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+                      <button 
+                        onClick={() => {
+                          // Download all three files sequentially
+                          const downloadAll = async () => {
+                            try {
+                              setDownloading(true);
+                              await handleDownload(job.result_data.output_files.generated, 'generated_molecules.sdf');
+                              await handleDownload(job.result_data.output_files.postproc_detailed, 'metrics_detailed.csv');
+                              await handleDownload(job.result_data.output_files.postproc_aggregated, 'metrics_aggregated.csv');
+                            } finally {
+                              setDownloading(false);
+                            }
+                          };
+                          downloadAll();
+                        }}
+                        disabled={downloading}
+                        className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                      >
+                        {downloading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Downloading Files...
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                            Download All Files
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Generic result display for other services */}
             <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
               {typeof job.result_data === 'object' ? (
@@ -555,6 +733,11 @@ const ServiceDetails = ({ jobId, onClose }) => {
                     
                     // Skip clintox_result as we're displaying it specially above
                     if (job.service_type === 'clintox' && (key === 'tox_result' || key === 'csv_file' || key === 'json_file')) {
+                      return null;
+                    }
+                    
+                    // Skip DrugFlow output_files as we're displaying them specially above
+                    if (job.service_type === 'drugflow' && key === 'output_files') {
                       return null;
                     }
                     
