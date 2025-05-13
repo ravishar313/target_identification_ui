@@ -384,16 +384,63 @@ const ServiceDetails = ({ jobId, onClose }) => {
               {job.parameters && Object.keys(job.parameters).length > 0 ? (
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-3">
-                    {Object.entries(job.parameters).map(([key, value]) => (
-                      <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                          {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
-                          {typeof value === 'object' ? JSON.stringify(value) : value.toString()}
-                        </dd>
-                      </div>
-                    ))}
+                    {Object.entries(job.parameters).map(([key, value]) => {
+                      // For DrugFlow service, only display specific parameters
+                      if (job.service_type === 'drugflow') {
+                        // Skip parameters that aren't user-selectable
+                        if (!['protein_path', 'ligand_path', 'n_samples', 'n_steps', 'pocket_distance_cutoff'].includes(key)) {
+                          return null;
+                        }
+                        
+                        // For protein and ligand paths, show download buttons instead of paths
+                        if (key === 'protein_path' || key === 'ligand_path') {
+                          const isProtein = key === 'protein_path';
+                          const fileType = isProtein ? 'Protein' : 'Ligand';
+                          const fileExt = isProtein ? '.pdb' : '.sdf';
+                          const fileName = isProtein ? 'protein' + fileExt : 'ligand' + fileExt;
+                          
+                          return (
+                            <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                {fileType} File:
+                              </dt>
+                              <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2">
+                                <button 
+                                  onClick={() => handleDownload(value, fileName)}
+                                  disabled={downloading}
+                                  className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                                >
+                                  {downloading ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                      Downloading...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                      </svg>
+                                      Download {fileType} File
+                                    </>
+                                  )}
+                                </button>
+                              </dd>
+                            </div>
+                          );
+                        }
+                      }
+                      
+                      return (
+                        <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                          <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
+                            {typeof value === 'object' ? JSON.stringify(value) : value.toString()}
+                          </dd>
+                        </div>
+                      );
+                    })}
                   </dl>
                 </div>
               ) : (
@@ -406,20 +453,30 @@ const ServiceDetails = ({ jobId, onClose }) => {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Default Parameters Used</h3>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-3">
-                    {Object.entries(job.parameters_used).map(([key, value]) => (
-                      <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                          {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
-                          {Array.isArray(value) 
-                            ? value.join(', ')
-                            : typeof value === 'object' 
-                              ? JSON.stringify(value) 
-                              : value.toString()}
-                        </dd>
-                      </div>
-                    ))}
+                    {Object.entries(job.parameters_used).map(([key, value]) => {
+                      // For DrugFlow service, only display specific parameters
+                      if (job.service_type === 'drugflow') {
+                        // Only show checkpoint, batch_size, device, seed, etc. in the default parameters section
+                        if (['protein_path', 'ligand_path', 'n_samples', 'n_steps', 'pocket_distance_cutoff'].includes(key)) {
+                          return null;
+                        }
+                      }
+                      
+                      return (
+                        <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                          <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}:
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 break-all">
+                            {Array.isArray(value) 
+                              ? value.join(', ')
+                              : typeof value === 'object' 
+                                ? JSON.stringify(value) 
+                                : value.toString()}
+                          </dd>
+                        </div>
+                      );
+                    })}
                   </dl>
                 </div>
               </div>
