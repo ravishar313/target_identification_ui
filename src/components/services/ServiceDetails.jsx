@@ -430,6 +430,102 @@ const ServiceDetails = ({ jobId, onClose }) => {
                         }
                       }
                       
+                      // For DiffDock service, handle protein and ligand files
+                      if (job.service_type === 'diffdock') {
+                        // Skip parameters that aren't directly related to files we want to download
+                        if (key === 'is_smile') {
+                          return (
+                            <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                Input Type:
+                              </dt>
+                              <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2">
+                                {value ? 'SMILE String' : 'Ligand File'}
+                              </dd>
+                            </div>
+                          );
+                        }
+                        
+                        // For protein file path, show download button
+                        if (key === 'protein_file_path') {
+                          return (
+                            <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                Protein File:
+                              </dt>
+                              <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2">
+                                <button 
+                                  onClick={() => handleDownload(value, 'protein.pdb')}
+                                  disabled={downloading}
+                                  className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                                >
+                                  {downloading ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                      Downloading...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                      </svg>
+                                      Download Protein File
+                                    </>
+                                  )}
+                                </button>
+                              </dd>
+                            </div>
+                          );
+                        }
+                        
+                        // For ligand input, show either the SMILE string or a download button
+                        if (key === 'ligand_input') {
+                          const isSmile = job.parameters.is_smile;
+                          
+                          if (isSmile) {
+                            return (
+                              <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                  Ligand SMILE String:
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2 font-mono break-all">
+                                  {value}
+                                </dd>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
+                                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                  Ligand File:
+                                </dt>
+                                <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2">
+                                  <button 
+                                    onClick={() => handleDownload(value, 'ligand.mol2')}
+                                    disabled={downloading}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                                  >
+                                    {downloading ? (
+                                      <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        Downloading...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                        </svg>
+                                        Download Ligand File
+                                      </>
+                                    )}
+                                  </button>
+                                </dd>
+                              </div>
+                            );
+                          }
+                        }
+                      }
+                      
                       return (
                         <div key={key} className="sm:grid sm:grid-cols-3 sm:gap-4">
                           <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
