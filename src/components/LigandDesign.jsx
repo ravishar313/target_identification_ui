@@ -4,7 +4,7 @@ import Chart from 'chart.js/auto';
 import * as d3 from 'd3';
 import _ from 'lodash';
 
-const LigandDesign = ({ data, onNext, onBack, onViewChange }) => {
+const LigandDesign = ({ data, onNext, onBack, onViewChange, onDataChange }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -3218,11 +3218,65 @@ const LigandDesign = ({ data, onNext, onBack, onViewChange }) => {
     }
   }, [activeView, similarityMatrix, loadingSimilarity, leadData]);
 
-  // Update setActiveView to report changes
+  // Update setActiveView to report changes and save all relevant view data to the parent component
   const handleViewChange = (view) => {
     setActiveView(view);
+    
+    // Update parent with view and relevant data
     if (onViewChange) {
       onViewChange(view);
+    }
+    
+    // Send all relevant state to parent component
+    if (onDataChange) {
+      const viewData = {
+        currentView: view,
+        leads: leadData?.leads || [],
+        leadStatus: leadData?.status || 'not_started',
+        designParams: designParams,
+        leadsProperties
+      };
+      
+      // Add view-specific data
+      if (view === 'grid') {
+        viewData.sortOption = sortOption;
+        viewData.sortDirection = sortDirection;
+        viewData.searchQuery = searchQuery;
+        viewData.filters = filters;
+        viewData.filteredLeads = filteredAndSortedLeads;
+      } else if (view === 'summary') {
+        viewData.propertyStats = propertyStats;
+        // Add chart data if available
+        if (charts.current) {
+          viewData.chartData = Object.keys(charts.current).reduce((acc, key) => {
+            if (charts.current[key]) {
+              acc[key] = true; // Just indicate chart exists, don't send actual chart data
+            }
+            return acc;
+          }, {});
+        }
+      } else if (view === 'similarity') {
+        viewData.similarityMatrix = similarityMatrix ? true : false; // Just indicate if it exists
+        viewData.validSmiles = validSmiles;
+        viewData.clusterCount = clusterCount;
+        viewData.similarityCutoff = similarityCutoff;
+        viewData.selectedCluster = selectedCluster;
+        
+        if (getClusteredData) {
+          viewData.clusters = getClusteredData.clusters.map(c => ({
+            id: c.id,
+            size: c.members.length
+          }));
+        }
+      }
+      
+      // Include selected molecule if any
+      if (selectedMolecule) {
+        viewData.selectedMolecule = selectedMolecule;
+        viewData.selectedMoleculeProps = selectedMoleculeProps;
+      }
+      
+      onDataChange(viewData);
     }
   };
 

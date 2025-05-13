@@ -64,6 +64,7 @@ const WorkflowAssistant = () => {
         body: JSON.stringify({
           message: '__connection_test__',
           context: workflowContext,
+          chatHistory: []
         }),
       });
       
@@ -182,6 +183,34 @@ const WorkflowAssistant = () => {
                       }`}
                     >
                       <p className="text-sm">{message.text}</p>
+                      {message.action && (
+                        <div className="mt-2 text-xs italic">
+                          {message.action.type === 'NAVIGATE_STEP' && (
+                            <span>Action: Navigated to {message.action.payload.step + 1}</span>
+                          )}
+                          {message.action.type === 'CHANGE_VIEW' && (
+                            <span>Action: Changed view to {message.action.payload.view}</span>
+                          )}
+                          {message.action.type === 'EXECUTE_FILTER' && (
+                            <span>Action: Applied filter {message.action.payload.filterType}</span>
+                          )}
+                          {message.action.type === 'EXECUTE_SORT' && (
+                            <span>Action: Sorted by {message.action.payload.sortField}</span>
+                          )}
+                          {message.action.type === 'EXECUTE_SEARCH' && (
+                            <span>Action: Searched for "{message.action.payload.searchQuery}"</span>
+                          )}
+                          {message.action.type === 'SELECT_ITEM' && (
+                            <span>Action: Selected {message.action.payload.itemType} {message.action.payload.itemId}</span>
+                          )}
+                          {message.action.type === 'SUBMIT_FORM' && (
+                            <span>Action: Submitted {message.action.payload.formId}</span>
+                          )}
+                          {message.action.type === 'RESET_STATE' && (
+                            <span>Action: Reset {message.action.payload.stateType}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {message.isLoading && (
                       <div className="mt-2 flex items-center space-x-1">

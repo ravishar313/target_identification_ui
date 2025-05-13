@@ -21,7 +21,8 @@ export const useChatStore = create((set, get) => ({
   addAssistantMessage: (text, action = null) => set(state => ({
     messages: [...state.messages, { 
       text, 
-      isUser: false
+      isUser: false,
+      action: action
     }]
   })),
   
@@ -47,7 +48,7 @@ export const useChatStore = create((set, get) => ({
   // Send a message to the backend API
   sendMessage: async (text, context) => {
     // Get current state
-    const { addUserMessage, setLoadingMessage, removeLoadingMessage, addAssistantMessage } = get();
+    const { addUserMessage, setLoadingMessage, removeLoadingMessage, addAssistantMessage, messages } = get();
     
     // Add user message to chat
     addUserMessage(text);
@@ -55,6 +56,13 @@ export const useChatStore = create((set, get) => ({
     // Set loading state
     set({ isLoading: true });
     setLoadingMessage();
+    
+    // Prepare chat history for the API request
+    const chatHistory = messages.filter(msg => !msg.isLoading).map(msg => ({
+      role: msg.isUser ? 'user' : 'assistant',
+      content: msg.text,
+      action: msg.action || null
+    }));
     
     try {
       const response = await fetch(`${BaseUrl}/assistant/chat`, {
@@ -65,6 +73,7 @@ export const useChatStore = create((set, get) => ({
         body: JSON.stringify({
           message: text,
           context: context,
+          chatHistory: chatHistory
         }),
       });
       
@@ -79,7 +88,7 @@ export const useChatStore = create((set, get) => ({
       
       // Add assistant response and auto-execute action if it exists
       if (data.action) {
-        addAssistantMessage(data.message);
+        addAssistantMessage(data.message, data.action);
         
         // Auto-execute the action after a short delay to ensure the message is displayed first
         setTimeout(() => {

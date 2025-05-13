@@ -257,4 +257,95 @@ Each step includes comprehensive error handling with:
 
 ## Conclusion
 
-The Target Identification UI provides a structured approach to the drug discovery process, from target identification through lead optimization, guiding researchers through complex processes with an intuitive interface. The application integrates with specialized backends that perform detailed analysis to help identify promising therapeutic targets and lead compounds for various diseases. 
+The Target Identification UI provides a structured approach to the drug discovery process, from target identification through lead optimization, guiding researchers through complex processes with an intuitive interface. The application integrates with specialized backends that perform detailed analysis to help identify promising therapeutic targets and lead compounds for various diseases.
+
+# Workflow Assistant
+
+## Overview
+
+The application includes a Workflow Assistant feature that provides context-aware help and actions for users. The assistant appears as a chat interface in a sidebar that can be toggled on any workflow page.
+
+## Features
+
+- Context-aware assistance based on the current workflow, step, and view
+- Ability to execute actions directly from the chat interface
+- Hierarchical context tracking that updates as the user navigates through the workflow
+
+## API Integration
+
+The Workflow Assistant integrates with a backend API:
+
+```
+POST /assistant/chat
+```
+
+**Request:**
+```json
+{
+  "message": "User message text",
+  "context": {
+    "workflow": "lead-identification",
+    "currentStep": "ligand-design",
+    "currentView": "grid",
+    "data": {
+      // Current workflow data
+    },
+    "availableActions": [
+      {
+        "id": "action-id",
+        "type": "ACTION_TYPE",
+        "label": "Action Label",
+        "payload": {
+          // Action-specific data
+        }
+      }
+    ]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Assistant's response text",
+  "action": null | {
+    "id": "unique-action-id",
+    "type": "ACTION_TYPE",
+    "label": "Action button label",
+    "payload": {
+      // Action-specific payload
+    }
+  }
+}
+```
+
+## Supported Action Types
+
+The assistant can execute various actions:
+
+- `NAVIGATE_STEP` - Navigate to a different step in the workflow
+- `CHANGE_VIEW` - Change the current view (e.g., grid, summary, similarity)
+- `EXECUTE_FILTER` - Apply filter to data
+- `EXECUTE_SORT` - Sort data by field
+- `EXECUTE_SEARCH` - Search within the current data
+- `EXECUTE_API_CALL` - Execute a backend API call
+- `SELECT_ITEM` - Select an item (e.g., a molecule)
+- `SUBMIT_FORM` - Submit form data
+- `RESET_STATE` - Reset component state
+
+## Usage
+
+To use the Workflow Assistant in a new workflow page, wrap your component with the `WorkflowContextProvider`:
+
+```jsx
+<WorkflowContextProvider
+  workflow="workflow-name"
+  currentStep="current-step-name"
+  currentView="current-view-name"
+  data={yourData}
+  availableActions={yourAvailableActions}
+>
+  {/* Your workflow content */}
+  <WorkflowAssistant />
+</WorkflowContextProvider>
+``` 
