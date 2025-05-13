@@ -4,7 +4,7 @@ import Chart from 'chart.js/auto';
 import * as d3 from 'd3';
 import _ from 'lodash';
 
-const LigandDesign = ({ data, onNext, onBack }) => {
+const LigandDesign = ({ data, onNext, onBack, onViewChange }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -3218,6 +3218,14 @@ const LigandDesign = ({ data, onNext, onBack }) => {
     }
   }, [activeView, similarityMatrix, loadingSimilarity, leadData]);
 
+  // Update setActiveView to report changes
+  const handleViewChange = (view) => {
+    setActiveView(view);
+    if (onViewChange) {
+      onViewChange(view);
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="space-y-6">
@@ -3344,7 +3352,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
               <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
                 <div className="flex space-x-4">
                   <button
-                    onClick={() => setActiveView('grid')}
+                    onClick={() => handleViewChange('grid')}
                     className={`py-2 px-1 border-b-2 font-medium text-sm focus:outline-none ${
                       activeView === 'grid'
                         ? 'border-pharma-blue dark:border-pharma-teal text-pharma-blue dark:text-pharma-teal'
@@ -3354,7 +3362,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
                     Grid View
                   </button>
                   <button
-                    onClick={() => setActiveView('summary')}
+                    onClick={() => handleViewChange('summary')}
                     className={`py-2 px-1 border-b-2 font-medium text-sm focus:outline-none ${
                       activeView === 'summary'
                         ? 'border-pharma-blue dark:border-pharma-teal text-pharma-blue dark:text-pharma-teal'
@@ -3364,7 +3372,7 @@ const LigandDesign = ({ data, onNext, onBack }) => {
                     Summary
                   </button>
                   <button
-                    onClick={() => setActiveView('similarity')}
+                    onClick={() => handleViewChange('similarity')}
                     className={`py-2 px-1 border-b-2 font-medium text-sm focus:outline-none ${
                       activeView === 'similarity'
                         ? 'border-pharma-blue dark:border-pharma-teal text-pharma-blue dark:text-pharma-teal'

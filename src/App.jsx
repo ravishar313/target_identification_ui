@@ -9,6 +9,7 @@ import PCCEvaluationPage from './pages/PCCEvaluation/PCCEvaluationPage'
 import PyMolChatPage from './pages/PyMolChat/PyMolChatPage'
 import TxGemmaChatPage from './pages/TxGemmaChat/TxGemmaChatPage'
 import ServicesPage from './pages/Services/ServicesPage'
+import WorkflowAssistant from './components/WorkflowAssistant'
 
 function App() {
   const [activeModule, setActiveModule] = useState('target-identification');
@@ -46,6 +47,7 @@ function App() {
     <MainLayout>
       <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
       {renderActiveModule()}
+      {/* No need to add WorkflowAssistant here as it's already included in each workflow page */}
     </MainLayout>
   )
 }
