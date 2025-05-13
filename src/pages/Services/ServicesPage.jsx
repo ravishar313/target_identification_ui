@@ -6,6 +6,7 @@ import MolmimService from '../../components/services/MolmimService';
 import DiffdockService from '../../components/services/DiffdockService';
 import AdmetService from '../../components/services/AdmetService';
 import ClintoxService from '../../components/services/ClintoxService';
+import DrugflowService from '../../components/services/DrugflowService';
 import ServiceDetails from '../../components/services/ServiceDetails';
 import { fetchAvailableServices, fetchJobStatus } from '../../utils/servicesApi';
 
@@ -91,6 +92,8 @@ const ServicesPage = () => {
         return <AdmetService onJobSubmitted={handleViewJob} />;
       case 'clintox':
         return <ClintoxService onJobSubmitted={handleViewJob} />;
+      case 'drugflow':
+        return <DrugflowService onJobSubmitted={handleViewJob} />;
       default:
         return (
           <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">

@@ -41,6 +41,12 @@ export const fetchAvailableServices = async () => {
         name: 'ClinTox',
         icon: '🧪',
         description: 'Predict clinical toxicity and FDA approval likelihood'
+      },
+      {
+        id: 'drugflow',
+        name: 'DrugFlow',
+        icon: '💡',
+        description: 'Generate novel ligands for protein targets'
       }
       // Additional services can be added here as they become available
     ];
