@@ -3,6 +3,7 @@ import ProjectPDBSelection from '../../components/ProjectPDBSelection';
 import CharacteristicsDisplay from '../../components/CharacteristicsDisplay';
 import ReviewLeadCharacteristics from '../../components/ReviewLeadCharacteristics';
 import LigandDesign from '../../components/LigandDesign';
+import WorkflowAssistant from '../../components/assistant/WorkflowAssistant';
 import { endpoints } from '../../constants/api';
 
 const LeadIdentificationPage = () => {
@@ -15,6 +16,66 @@ const LeadIdentificationPage = () => {
     targetName: null,
     goodStructure: false
   });
+
+  // Keep a reference to the current component state for the assistant
+  const [componentState, setComponentState] = useState({});
+
+  // Action callbacks for the assistant
+  const actionCallbacks = {
+    // Navigation actions
+    onNext: () => handleNext(),
+    onBack: () => handleBack(),
+    goToStep: (stepIndex) => goToStep(parseInt(stepIndex, 10)),
+
+    // LigandDesign specific actions
+    setActiveView: (viewName) => {
+      if (steps[currentStep].component === LigandDesign && componentState.setActiveView) {
+        componentState.setActiveView(viewName);
+      }
+    },
+    applyFilter: (filterType, filterValue) => {
+      if (steps[currentStep].component === LigandDesign && componentState.handleFilterChange) {
+        if (typeof filterValue === 'object') {
+          // Apply complex filter with min/max
+          if (filterValue.min !== undefined) {
+            componentState.handleFilterChange(filterType, 'min', filterValue.min);
+          }
+          if (filterValue.max !== undefined) {
+            componentState.handleFilterChange(filterType, 'max', filterValue.max);
+          }
+          if (filterValue.enabled !== undefined) {
+            componentState.toggleFilter(filterType);
+          }
+        } else {
+          // Simple value filter
+          componentState.handleFilterChange(filterType, 'value', filterValue);
+        }
+      }
+    },
+    sortCompounds: (sortBy, sortDirection) => {
+      if (steps[currentStep].component === LigandDesign && componentState.handleSortChange) {
+        componentState.handleSortChange(sortBy);
+        if (componentState.sortDirection !== sortDirection) {
+          componentState.handleSortChange(sortBy); // Call again to toggle direction
+        }
+      }
+    },
+    resetFilters: () => {
+      if (steps[currentStep].component === LigandDesign && componentState.resetFilters) {
+        componentState.resetFilters();
+      }
+    },
+    showCompoundDetails: (compoundId) => {
+      if (steps[currentStep].component === LigandDesign && componentState.handleMoleculeSelect) {
+        componentState.handleMoleculeSelect(compoundId);
+      }
+    },
+    calculateSimilarity: () => {
+      if (steps[currentStep].component === LigandDesign && componentState.calculateSimilarity) {
+        componentState.calculateSimilarity();
+      }
+    }
+  };
 
   const steps = [
     { 
@@ -105,6 +166,11 @@ const LeadIdentificationPage = () => {
   const CurrentStepComponent = steps[currentStep].component;
   const additionalProps = getStepProps(currentStep);
 
+  // Method to capture state from child components
+  const captureComponentState = (state) => {
+    setComponentState(state);
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
       <h2 className="text-2xl font-bold mb-6 text-pharma-blue dark:text-pharma-teal">Lead Identification</h2>
@@ -160,9 +226,24 @@ const LeadIdentificationPage = () => {
           onBack={handleBack}
           data={data}
           setData={setData}
+          captureComponentState={captureComponentState}
           {...additionalProps}
         />
       </div>
+
+      {/* Workflow Assistant */}
+      <WorkflowAssistant 
+        workflowProps={{
+          data,
+          onNext: handleNext,
+          onBack: handleBack
+        }}
+        workflowState={{
+          currentStep,
+          ...componentState
+        }}
+        actionCallbacks={actionCallbacks}
+      />
     </div>
   );
 };

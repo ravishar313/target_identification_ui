@@ -4,7 +4,7 @@ import Chart from 'chart.js/auto';
 import * as d3 from 'd3';
 import _ from 'lodash';
 
-const LigandDesign = ({ data, onNext, onBack }) => {
+const LigandDesign = ({ data, onNext, onBack, captureComponentState }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -58,6 +58,35 @@ const LigandDesign = ({ data, onNext, onBack }) => {
   const similarityMatrixRef = useRef(null);
   const similarityNetworkRef = useRef(null);
   const charts = useRef({});
+
+  // Share component state with the assistant
+  useEffect(() => {
+    if (captureComponentState) {
+      captureComponentState({
+        leadData,
+        activeView,
+        filters,
+        sortOption,
+        sortDirection,
+        leadsProperties,
+        setActiveView,
+        handleFilterChange,
+        toggleFilter,
+        handleSortChange,
+        resetFilters,
+        handleMoleculeSelect,
+        calculateSimilarity
+      });
+    }
+  }, [
+    captureComponentState,
+    leadData,
+    activeView,
+    filters,
+    sortOption,
+    sortDirection,
+    leadsProperties
+  ]);
 
   // Function to submit lead design job
   const submitLeadDesignJob = async () => {
