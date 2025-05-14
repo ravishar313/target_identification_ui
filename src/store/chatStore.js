@@ -61,7 +61,7 @@ export const useChatStore = create((set, get) => ({
     const chatHistory = messages.filter(msg => !msg.isLoading).map(msg => ({
       role: msg.isUser ? 'user' : 'assistant',
       content: msg.text,
-      action: msg.action || null
+      action: msg.action ? JSON.stringify(msg.action) : null
     }));
     
     try {
