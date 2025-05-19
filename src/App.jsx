@@ -6,6 +6,7 @@ import TargetIdentificationPage from './pages/TargetIdentification/TargetIdentif
 import LeadIdentificationPage from './pages/LeadIdentification/LeadIdentificationPage'
 import LeadOptimizationPage from './pages/LeadOptimization/LeadOptimizationPage'
 import PCCEvaluationPage from './pages/PCCEvaluation/PCCEvaluationPage'
+import PDBViewerPage from './pages/PDBViewer/PDBViewerPage'
 import PyMolChatPage from './pages/PyMolChat/PyMolChatPage'
 import TxGemmaChatPage from './pages/TxGemmaChat/TxGemmaChatPage'
 import ServicesPage from './pages/Services/ServicesPage'
@@ -32,6 +33,8 @@ function App() {
         return <LeadOptimizationPage key={moduleKey} activeModule={activeModule} />;
       case 'pcc-evaluation':
         return <PCCEvaluationPage key={moduleKey} activeModule={activeModule} />;
+      case 'pdb-viewer':
+        return <PDBViewerPage key={moduleKey} activeModule={activeModule} />;
       case 'pymol-chat':
         return <PyMolChatPage key={moduleKey} activeModule={activeModule} />;
       case 'txgemma-chat':
